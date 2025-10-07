@@ -3,12 +3,13 @@ interface ProcessingStatsProps {
 	pending: number;
 	ocr: number;
 	analyzed: number;
+	processing: number;
 	completed: number;
 	errors: number;
 	isProcessing: boolean;
 }
 
-export default function ProcessingStats({ total, pending, ocr, analyzed, completed, errors, isProcessing }: ProcessingStatsProps) {
+export default function ProcessingStats({ total, pending, ocr, analyzed, processing, completed, errors, isProcessing }: ProcessingStatsProps) {
 	const finished = completed + errors;
 	const percentage = total > 0 ? (finished / total) * 100 : 0;
 
@@ -27,7 +28,12 @@ export default function ProcessingStats({ total, pending, ocr, analyzed, complet
 					<div className="bg-green-500 transition-all duration-500" style={{ width: `${total > 0 ? (completed / total) * 100 : 0}%` }} title={`${completed} terminés`} />
 					<div className="bg-red-500 transition-all duration-500" style={{ width: `${total > 0 ? (errors / total) * 100 : 0}%` }} title={`${errors} erreurs`} />
 					<div
-						className="bg-blue-500 animate-pulse transition-all duration-500"
+						className="bg-indigo-500 animate-pulse transition-all duration-500"
+						style={{ width: `${total > 0 ? (processing / total) * 100 : 0}%` }}
+						title={`${processing} tamponnage en cours`}
+					/>
+					<div
+						className="bg-blue-500 transition-all duration-500"
 						style={{ width: `${total > 0 ? (analyzed / total) * 100 : 0}%` }}
 						title={`${analyzed} analysés en attente de tamponnage`}
 					/>
@@ -49,7 +55,6 @@ export default function ProcessingStats({ total, pending, ocr, analyzed, complet
 						</span>
 					</div>
 				)}
-
 				{ocr > 0 && (
 					<div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
 						<div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
@@ -58,24 +63,31 @@ export default function ProcessingStats({ total, pending, ocr, analyzed, complet
 						</span>
 					</div>
 				)}
-
-			{analyzed > 0 && (
-				<div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
-					<div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-					<span className="text-gray-700">
-						<span className="font-semibold">{analyzed}</span> analysés
-					</span>
-				</div>
-			)}
-			
-			{completed > 0 && (
-				<div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
-					<div className="w-3 h-3 bg-green-500 rounded-full"></div>
-					<span className="text-gray-700">
-						<span className="font-semibold">{completed}</span> terminés
-					</span>
-				</div>
-			)}				{errors > 0 && (
+				{analyzed > 0 && (
+					<div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+						<div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+						<span className="text-gray-700">
+							<span className="font-semibold">{analyzed}</span> analysés
+						</span>
+					</div>
+				)}
+				{processing > 0 && (
+					<div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+						<div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+						<span className="text-gray-700">
+							<span className="font-semibold">{processing}</span> tamponnage
+						</span>
+					</div>
+				)}
+				{completed > 0 && (
+					<div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+						<div className="w-3 h-3 bg-green-500 rounded-full"></div>
+						<span className="text-gray-700">
+							<span className="font-semibold">{completed}</span> terminés
+						</span>
+					</div>
+				)}{" "}
+				{errors > 0 && (
 					<div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
 						<div className="w-3 h-3 bg-red-500 rounded-full"></div>
 						<span className="text-gray-700">

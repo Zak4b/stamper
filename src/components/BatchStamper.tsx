@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Dossier, getAllDossiers } from "../lib/database";
 import { stampPDFWithAnomalyDetection, StampPosition } from "../lib/pdfStamper";
 import { FileText, Download, CheckCircle, AlertCircle, CreditCard as Edit2, Loader } from "lucide-react";
@@ -15,7 +15,7 @@ interface Props {
 interface PDFFile {
 	file: File;
 	numeroDossier: string;
-	status: "pending" | "ocr" | "analyzed" | "completed" | "error";
+	status: "pending" | "ocr" | "analyzed" | "processing" | "completed" | "error";
 	error?: string;
 	stampedData?: Uint8Array;
 	ocrConfidence?: number;
@@ -27,9 +27,21 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 	const { push } = useToasts();
 	const [pdfFiles, setPdfFiles] = useState<PDFFile[]>([]);
 	const [processing, setProcessing] = useState(false);
+	const [autoStamping, setAutoStamping] = useState(true); // File d'attente automatique activée par défaut
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [editValue, setEditValue] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// Fonction utilitaire pour mettre à jour un fichier spécifique
+	const updatePdfFile = useCallback((index: number, updates: Partial<PDFFile>) => {
+		setPdfFiles((prev) => {
+			const updated = [...prev];
+			if (updated[index]) {
+				updated[index] = { ...updated[index], ...updates };
+			}
+			return updated;
+		});
+	}, []);
 
 	async function handleFilesSelected(files: FileList) {
 		const newFiles: PDFFile[] = Array.from(files)
@@ -47,48 +59,28 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 			const fileIndex = i;
 			const file = newFiles[i - pdfFiles.length].file;
 
-			setPdfFiles((prev) => {
-				const updated = [...prev];
-				updated[fileIndex] = { ...updated[fileIndex], status: "ocr" };
-				return updated;
-			});
+			updatePdfFile(fileIndex, { status: "ocr" });
 
 			try {
 				const { performOCRWithProgress } = await import("../lib/ocrHelper");
 				const result = await performOCRWithProgress(file, ocrPageNumber, ocrRegion, (progress: number) => {
-					setPdfFiles((prev) => {
-						const updated = [...prev];
-						if (updated[fileIndex]) {
-							updated[fileIndex] = { ...updated[fileIndex], ocrProgress: progress };
-						}
-						return updated;
-					});
+					updatePdfFile(fileIndex, { ocrProgress: progress });
 				});
 
 				const detectedNumber = result.detectedNumbers[0] || "NON DÉTECTÉ";
 
-				setPdfFiles((prev) => {
-					const updated = [...prev];
-					updated[fileIndex] = {
-						...updated[fileIndex],
-						numeroDossier: detectedNumber,
-						status: "analyzed",
-						ocrConfidence: result.confidence,
-						detectedNumbers: result.detectedNumbers,
-						ocrProgress: 100,
-					};
-					return updated;
+				updatePdfFile(fileIndex, {
+					numeroDossier: detectedNumber,
+					status: "analyzed",
+					ocrConfidence: result.confidence,
+					detectedNumbers: result.detectedNumbers,
+					ocrProgress: 100,
 				});
 			} catch (error) {
-				setPdfFiles((prev) => {
-					const updated = [...prev];
-					updated[fileIndex] = {
-						...updated[fileIndex],
-						numeroDossier: "ERREUR OCR",
-						status: "error",
-						error: error instanceof Error ? error.message : "Erreur OCR",
-					};
-					return updated;
+				updatePdfFile(fileIndex, {
+					numeroDossier: "ERREUR OCR",
+					status: "error",
+					error: error instanceof Error ? error.message : "Erreur OCR",
 				});
 			}
 		}
@@ -100,18 +92,59 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 	}
 
 	function saveEditedNumber(index: number) {
-		setPdfFiles((prev) => {
-			const updated = [...prev];
-			updated[index] = {
-				...updated[index],
-				numeroDossier: editValue,
-				status: "pending",
-			};
-			return updated;
+		updatePdfFile(index, {
+			numeroDossier: editValue,
+			status: "analyzed", // Passage direct en analyzed pour déclencher l'auto-tamponnage
 		});
 		setEditingIndex(null);
 		setEditValue("");
 	}
+
+	// Fonction pour traiter automatiquement un seul fichier
+	const processFileAutomatically = useCallback(
+		async (fileIndex: number) => {
+			if (!autoStamping) return;
+
+			const pdfFile = pdfFiles[fileIndex];
+			if (!pdfFile || pdfFile.status !== "analyzed") return;
+
+			try {
+				const dossiers = await getAllDossiers();
+				const dossier = dossiers.find((d) => d.numero_dossier === pdfFile.numeroDossier);
+
+				// Marquer comme en cours de tamponnage
+				updatePdfFile(fileIndex, { status: "processing" });
+				if (!dossier) {
+					updatePdfFile(fileIndex, { status: "error", error: "Numéro de dossier non trouvé dans la base de données" });
+					return;
+				}
+
+				const stampedBytes = await stampPDFWithAnomalyDetection(pdfFile.file, {
+					position: stampPosition,
+					text: dossier.valeur_tampon,
+					fontSize: 14,
+					color: { r: 0, g: 0, b: 0 },
+				});
+
+				updatePdfFile(fileIndex, { status: "completed", stampedData: stampedBytes });
+			} catch (error) {
+				updatePdfFile(fileIndex, { status: "error", error: error instanceof Error ? error.message : "Erreur de tamponnage" });
+			}
+		},
+		[autoStamping, pdfFiles, stampPosition, updatePdfFile]
+	);
+
+	// Surveiller les fichiers analyzed et les traiter automatiquement
+	useEffect(() => {
+		if (!autoStamping) return;
+
+		const analyzedFiles = pdfFiles.map((file, index) => ({ file, index })).filter(({ file }) => file.status === "analyzed");
+
+		// Traiter automatiquement les fichiers analyzed un par un
+		analyzedFiles.forEach(({ index }) => {
+			processFileAutomatically(index);
+		});
+	}, [pdfFiles, autoStamping, processFileAutomatically]); // Déclenché quand pdfFiles change
 
 	async function processAllPDFs() {
 		setProcessing(true);
@@ -121,23 +154,19 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 			const dossierMap = new Map<string, Dossier>();
 			dossiers.forEach((d) => dossierMap.set(d.numero_dossier, d));
 
-		for (let i = 0; i < pdfFiles.length; i++) {
-			const pdfFile = pdfFiles[i];
-			
-			// Traiter seulement les fichiers analyzed ou ceux avec des erreurs OCR récupérables
-			if (pdfFile.status !== "analyzed" && pdfFile.status !== "pending") {
-				continue;
-			}				const dossier = dossierMap.get(pdfFile.numeroDossier);
+			for (let i = 0; i < pdfFiles.length; i++) {
+				const pdfFile = pdfFiles[i];
+
+				// Traiter seulement les fichiers analyzed ou ceux avec des erreurs OCR récupérables
+				if (pdfFile.status !== "analyzed" && pdfFile.status !== "pending") {
+					continue;
+				}
+				const dossier = dossierMap.get(pdfFile.numeroDossier);
 
 				if (!dossier) {
-					setPdfFiles((prev) => {
-						const updated = [...prev];
-						updated[i] = {
-							...updated[i],
-							status: "error",
-							error: "Numéro de dossier non trouvé dans la base de données",
-						};
-						return updated;
+					updatePdfFile(i, {
+						status: "error",
+						error: "Numéro de dossier non trouvé dans la base de données",
 					});
 					continue;
 				}
@@ -150,24 +179,14 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 						color: { r: 0, g: 0, b: 0 },
 					});
 
-					setPdfFiles((prev) => {
-						const updated = [...prev];
-						updated[i] = {
-							...updated[i],
-							status: "completed",
-							stampedData: stampedBytes,
-						};
-						return updated;
+					updatePdfFile(i, {
+						status: "completed",
+						stampedData: stampedBytes,
 					});
 				} catch (error) {
-					setPdfFiles((prev) => {
-						const updated = [...prev];
-						updated[i] = {
-							...updated[i],
-							status: "error",
-							error: error instanceof Error ? error.message : "Erreur inconnue",
-						};
-						return updated;
+					updatePdfFile(i, {
+						status: "error",
+						error: error instanceof Error ? error.message : "Erreur inconnue",
 					});
 				}
 			}
@@ -211,13 +230,29 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 	const errorCount = pdfFiles.filter((f) => f.status === "error").length;
 	const ocrCount = pdfFiles.filter((f) => f.status === "ocr").length;
 	const analyzedCount = pdfFiles.filter((f) => f.status === "analyzed").length;
+	const processingCount = pdfFiles.filter((f) => f.status === "processing").length;
 	const pendingCount = pdfFiles.filter((f) => f.status === "pending").length;
 	const totalCount = pdfFiles.length;
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 			<div className="flex items-center justify-between mb-6">
-				<h2 className="text-xl font-semibold text-gray-900">Traitement par lot</h2>
+				<div>
+					<h2 className="text-xl font-semibold text-gray-900">Traitement par lot</h2>
+					{pdfFiles.length > 0 && (
+						<div className="flex items-center gap-2 mt-2">
+							<label className="flex items-center gap-2 text-sm text-gray-600">
+								<input
+									type="checkbox"
+									checked={autoStamping}
+									onChange={(e) => setAutoStamping(e.target.checked)}
+									className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+								/>
+								Tamponnage automatique après analyse OCR
+							</label>
+						</div>
+					)}
+				</div>
 				<div className="flex gap-3">
 					<label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
 						<FileText className="w-4 h-4" />
@@ -226,13 +261,15 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 					</label>
 					{pdfFiles.length > 0 && (
 						<>
-							<button
-								onClick={processAllPDFs}
-								disabled={processing}
-								className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-							>
-								{processing ? "Traitement..." : "Tamponner tout"}
-							</button>
+							{!autoStamping && (
+								<button
+									onClick={processAllPDFs}
+									disabled={processing}
+									className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+								>
+									{processing ? "Traitement..." : "Tamponner tout"}
+								</button>
+							)}
 							{completedCount > 0 && (
 								<button onClick={downloadAll} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
 									<Download className="w-4 h-4" />
@@ -251,6 +288,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 					pending={pendingCount}
 					ocr={ocrCount}
 					analyzed={analyzedCount}
+					processing={processingCount}
 					completed={completedCount}
 					errors={errorCount}
 					isProcessing={processing}
@@ -338,6 +376,12 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 									)}
 									{pdfFile.status === "pending" && <span className="text-xs text-gray-500">En attente</span>}
 									{pdfFile.status === "analyzed" && <span className="text-xs text-green-600 font-medium">Analysé ✓</span>}
+									{pdfFile.status === "processing" && (
+										<div className="flex items-center gap-2">
+											<Loader className="w-4 h-4 text-indigo-600 animate-spin" />
+											<span className="text-xs text-indigo-600 font-medium">Tamponnage...</span>
+										</div>
+									)}
 									{pdfFile.status === "completed" && (
 										<>
 											<CheckCircle className="w-5 h-5 text-green-600" />
