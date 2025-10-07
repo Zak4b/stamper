@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { StampPosition } from "./lib/pdfStamper";
 import { Rectangle } from "tesseract.js";
-import AppHeader from "./components/AppHeader";
-import NavigationSteps from "./components/NavigationSteps";
-import PageManager from "./components/PageManager";
+import AppHeader from "./components/ui/AppHeader";
+import NavigationSteps from "./components/ui/NavigationSteps";
+import PageManager from "./components/pages/PageManager";
 
 type Step = "database" | "ocr-region" | "position" | "stamping";
 

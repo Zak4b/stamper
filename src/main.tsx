@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import ToastProvider from "./components/Toasts";
+import ToastProvider from "./components/ui/Toasts";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(

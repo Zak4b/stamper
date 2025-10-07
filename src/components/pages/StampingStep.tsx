@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { Rectangle } from "tesseract.js";
-import BatchStamper from "./BatchStamper";
-import { StampPosition } from "../lib/pdfStamper";
-import LoadingSpinner from "./LoadingSpinner";
+import BatchStamper from "../BatchStamper";
+import { StampPosition } from "../../lib/pdfStamper";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 interface StampingStepProps {
 	stampPosition: StampPosition;

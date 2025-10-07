@@ -41,7 +41,7 @@ export default function CSVImportModal({ isOpen, onClose, parsed, detectedDelimi
 			return;
 		}
 		// lazy import parseCSV to avoid circular import issues
-		import("../lib/csvHelper")
+		import("../../lib/csvHelper")
 			.then((m) => {
 				const p = m.parseCSV(rawText, delimiter, hasHeader, 200);
 				setLocalParsed(p);

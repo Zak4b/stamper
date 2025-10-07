@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import StampPositionSelector from "./StampPositionSelector";
-import { StampPosition } from "../lib/pdfStamper";
-import LoadingSpinner from "./LoadingSpinner";
+import StampPositionSelector from "../StampPositionSelector";
+import { StampPosition } from "../../lib/pdfStamper";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 interface PositionStepProps {
 	pdfFile: File;

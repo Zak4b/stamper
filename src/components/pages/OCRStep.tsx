@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Rectangle } from "tesseract.js";
-import OCRRegionSelector from "./OCRRegionSelector";
-import LoadingSpinner from "./LoadingSpinner";
+import OCRRegionSelector from "../OCRRegionSelector";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 interface OCRStepProps {
 	pdfFile: File;

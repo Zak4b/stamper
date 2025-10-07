@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as deleteDossierDB, importDossiers } from "../lib/database";
 import { autoDetectDelimiter, parseCSV } from "../lib/csvHelper";
-import CSVImportModal from "./CSVImportModal";
+import CSVImportModal from "./ui/CSVImportModal";
 import { Plus, Trash2, Upload, Download } from "lucide-react";
-import ConfirmModal from "./ConfirmModal";
+import ConfirmModal from "./ui/ConfirmModal";
 import { clearAllDossiers } from "../lib/database";
 import { useToasts } from "../hooks/useToasts";
 

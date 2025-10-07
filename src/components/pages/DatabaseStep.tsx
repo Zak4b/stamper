@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { FileText } from "lucide-react";
-import DatabaseManager from "./DatabaseManager";
-import LoadingSpinner from "./LoadingSpinner";
+import DatabaseManager from "../DatabaseManager";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 interface DatabaseStepProps {
 	onSamplePDFSelected: (file: File) => void;
