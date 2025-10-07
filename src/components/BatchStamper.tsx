@@ -4,6 +4,7 @@ import { stampPDFWithAnomalyDetection, StampPosition } from "../lib/pdfStamper";
 import { FileText, Download, CheckCircle, AlertCircle, CreditCard as Edit2, Loader } from "lucide-react";
 import { useToasts } from "../hooks/useToasts";
 import { Rectangle } from "tesseract.js";
+import ProcessingStats from "./ui/ProcessingStats";
 
 interface Props {
 	stampPosition: StampPosition;
@@ -14,7 +15,7 @@ interface Props {
 interface PDFFile {
 	file: File;
 	numeroDossier: string;
-	status: "pending" | "ocr" | "processing" | "success" | "error";
+	status: "pending" | "ocr" | "analyzed" | "completed" | "error";
 	error?: string;
 	stampedData?: Uint8Array;
 	ocrConfidence?: number;
@@ -71,7 +72,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 					updated[fileIndex] = {
 						...updated[fileIndex],
 						numeroDossier: detectedNumber,
-						status: "pending",
+						status: "analyzed",
 						ocrConfidence: result.confidence,
 						detectedNumbers: result.detectedNumbers,
 						ocrProgress: 100,
@@ -120,16 +121,13 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 			const dossierMap = new Map<string, Dossier>();
 			dossiers.forEach((d) => dossierMap.set(d.numero_dossier, d));
 
-			for (let i = 0; i < pdfFiles.length; i++) {
-				const pdfFile = pdfFiles[i];
-
-				setPdfFiles((prev) => {
-					const updated = [...prev];
-					updated[i] = { ...updated[i], status: "processing" };
-					return updated;
-				});
-
-				const dossier = dossierMap.get(pdfFile.numeroDossier);
+		for (let i = 0; i < pdfFiles.length; i++) {
+			const pdfFile = pdfFiles[i];
+			
+			// Traiter seulement les fichiers analyzed ou ceux avec des erreurs OCR récupérables
+			if (pdfFile.status !== "analyzed" && pdfFile.status !== "pending") {
+				continue;
+			}				const dossier = dossierMap.get(pdfFile.numeroDossier);
 
 				if (!dossier) {
 					setPdfFiles((prev) => {
@@ -156,7 +154,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 						const updated = [...prev];
 						updated[i] = {
 							...updated[i],
-							status: "success",
+							status: "completed",
 							stampedData: stampedBytes,
 						};
 						return updated;
@@ -185,7 +183,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 		const zip = new JSZip();
 
 		pdfFiles.forEach((pdfFile) => {
-			if (pdfFile.status === "success" && pdfFile.stampedData) {
+			if (pdfFile.status === "completed" && pdfFile.stampedData) {
 				zip.file(`${pdfFile.numeroDossier}_tamponné.pdf`, new Uint8Array(pdfFile.stampedData));
 			}
 		});
@@ -209,8 +207,12 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 		a.click();
 	}
 
-	const successCount = pdfFiles.filter((f) => f.status === "success").length;
+	const completedCount = pdfFiles.filter((f) => f.status === "completed").length;
 	const errorCount = pdfFiles.filter((f) => f.status === "error").length;
+	const ocrCount = pdfFiles.filter((f) => f.status === "ocr").length;
+	const analyzedCount = pdfFiles.filter((f) => f.status === "analyzed").length;
+	const pendingCount = pdfFiles.filter((f) => f.status === "pending").length;
+	const totalCount = pdfFiles.length;
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -231,7 +233,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 							>
 								{processing ? "Traitement..." : "Tamponner tout"}
 							</button>
-							{successCount > 0 && (
+							{completedCount > 0 && (
 								<button onClick={downloadAll} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
 									<Download className="w-4 h-4" />
 									Télécharger tout (ZIP)
@@ -242,6 +244,19 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 				</div>
 			</div>
 
+			{/* Statistiques de progression - affichées seulement s'il y a des fichiers */}
+			{totalCount > 0 && (
+				<ProcessingStats
+					total={totalCount}
+					pending={pendingCount}
+					ocr={ocrCount}
+					analyzed={analyzedCount}
+					completed={completedCount}
+					errors={errorCount}
+					isProcessing={processing}
+				/>
+			)}
+
 			{pdfFiles.length === 0 ? (
 				<div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
 					<FileText className="w-12 h-12 mx-auto mb-3 text-gray-400" />
@@ -250,13 +265,13 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 				</div>
 			) : (
 				<>
-					{(successCount > 0 || errorCount > 0) && (
+					{(completedCount > 0 || errorCount > 0) && (
 						<div className="mb-4 p-4 bg-gray-50 rounded-lg flex items-center justify-between">
 							<div className="flex gap-6">
 								<div className="flex items-center gap-2">
 									<CheckCircle className="w-5 h-5 text-green-600" />
 									<span className="text-sm font-medium text-gray-700">
-										{successCount} réussi{successCount > 1 ? "s" : ""}
+										{completedCount} terminé{completedCount > 1 ? "s" : ""}
 									</span>
 								</div>
 								{errorCount > 0 && (
@@ -322,8 +337,8 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 										</div>
 									)}
 									{pdfFile.status === "pending" && <span className="text-xs text-gray-500">En attente</span>}
-									{pdfFile.status === "processing" && <span className="text-xs text-blue-600 font-medium">Tamponnage...</span>}
-									{pdfFile.status === "success" && (
+									{pdfFile.status === "analyzed" && <span className="text-xs text-green-600 font-medium">Analysé ✓</span>}
+									{pdfFile.status === "completed" && (
 										<>
 											<CheckCircle className="w-5 h-5 text-green-600" />
 											<button onClick={() => downloadSingle(pdfFile)} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
