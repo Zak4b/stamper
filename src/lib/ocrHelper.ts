@@ -24,7 +24,6 @@ function extractNumbers(text: string): string[] {
 export async function performOCRWithProgress(pdfFile: File, pageNumber: number, region: Rectangle | undefined, onProgress: (progress: number) => void): Promise<OCRResult> {
 	onProgress(10);
 
-	// Utiliser l'utilitaire factorisé pour créer le canvas et extraire l'image
 	const imageData = await createCanvasFromRegion(pdfFile, pageNumber, region, 1.5);
 
 	onProgress(60);

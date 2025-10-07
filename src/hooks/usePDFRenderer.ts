@@ -7,7 +7,6 @@ export function usePDFRenderer(pdfFile: File, options: PDFRenderOptions = {}) {
 	const [isLoading, setIsLoading] = useState(false);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 
-	// Stabiliser les options pour éviter les re-renders infinis
 	const stableOptions = useRef(options);
 	stableOptions.current = options;
 

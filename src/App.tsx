@@ -1,13 +1,23 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { FileText, Database, Stamp, Search } from "lucide-react";
-import DatabaseManager from "./components/DatabaseManager";
-import StampPositionSelector from "./components/StampPositionSelector";
-import BatchStamper from "./components/BatchStamper";
-import OCRRegionSelector from "./components/OCRRegionSelector";
+
+const DatabaseManager = lazy(() => import("./components/DatabaseManager"));
+const StampPositionSelector = lazy(() => import("./components/StampPositionSelector"));
+const BatchStamper = lazy(() => import("./components/BatchStamper"));
+const OCRRegionSelector = lazy(() => import("./components/OCRRegionSelector"));
 import { StampPosition } from "./lib/pdfStamper";
 import { Rectangle } from "tesseract.js";
 
 type Step = "database" | "ocr-region" | "position" | "stamping";
+
+function LoadingSpinner() {
+	return (
+		<div className="flex items-center justify-center p-8">
+			<div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+			<span className="ml-3 text-gray-600">Chargement...</span>
+		</div>
+	);
+}
 
 export default function App() {
 	const [currentStep, setCurrentStep] = useState<Step>("database");
@@ -114,7 +124,9 @@ export default function App() {
 				<div className="space-y-6">
 					{currentStep === "database" && (
 						<>
-							<DatabaseManager />
+							<Suspense fallback={<LoadingSpinner />}>
+								<DatabaseManager />
+							</Suspense>
 							<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 								<h3 className="text-lg font-semibold text-gray-900 mb-4">Étape suivante: Configuration OCR</h3>
 								<p className="text-gray-600 mb-4">Chargez un PDF exemple pour configurer la détection automatique des numéros de dossier et la position du tampon.</p>
@@ -129,7 +141,9 @@ export default function App() {
 
 					{currentStep === "ocr-region" && samplePDF && (
 						<>
-							<OCRRegionSelector pdfFile={samplePDF} onRegionSelected={handleOCRRegionSelected} onPageChanged={handleOCRPageChanged} />
+							<Suspense fallback={<LoadingSpinner />}>
+								<OCRRegionSelector pdfFile={samplePDF} onRegionSelected={handleOCRRegionSelected} onPageChanged={handleOCRPageChanged} />
+							</Suspense>
 							<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 								<div className="flex items-center justify-between">
 									<div>
@@ -150,7 +164,9 @@ export default function App() {
 
 					{currentStep === "position" && samplePDF && (
 						<>
-							<StampPositionSelector pdfFile={samplePDF} onPositionSelected={handlePositionSelected} currentPosition={stampPosition || undefined} />
+							<Suspense fallback={<LoadingSpinner />}>
+								<StampPositionSelector pdfFile={samplePDF} onPositionSelected={handlePositionSelected} currentPosition={stampPosition || undefined} />
+							</Suspense>
 							{stampPosition && (
 								<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 									<div className="flex items-center justify-between">
@@ -169,7 +185,11 @@ export default function App() {
 						</>
 					)}
 
-					{currentStep === "stamping" && stampPosition && <BatchStamper stampPosition={stampPosition} ocrRegion={ocrRegion} ocrPageNumber={ocrPageNumber} />}
+					{currentStep === "stamping" && stampPosition && (
+						<Suspense fallback={<LoadingSpinner />}>
+							<BatchStamper stampPosition={stampPosition} ocrRegion={ocrRegion} ocrPageNumber={ocrPageNumber} />
+						</Suspense>
+					)}
 				</div>
 			</div>
 		</div>

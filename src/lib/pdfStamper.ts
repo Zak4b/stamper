@@ -1,5 +1,3 @@
-import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
-
 export interface StampPosition {
 	x: number;
 	y: number;
@@ -14,6 +12,8 @@ export interface StampConfig {
 }
 
 export async function stampPDF(pdfBytes: Uint8Array, config: StampConfig, isReoriented: boolean = false): Promise<Uint8Array> {
+	const { PDFDocument, StandardFonts, rgb, degrees } = await import("pdf-lib");
+
 	const pdfDoc = await PDFDocument.load(pdfBytes);
 	const pages = pdfDoc.getPages();
 
@@ -44,8 +44,6 @@ export async function stampPDF(pdfBytes: Uint8Array, config: StampConfig, isReor
 	let finalY: number;
 
 	if (isReoriented) {
-		// Pour un PDF réorienté, les coordonnées peuvent être utilisées plus directement
-		// car le contenu a été réorganisé dans le bon sens
 		finalX = actualX;
 		finalY = pageHeight - actualY; // Conversion standard canvas->PDF (origine en bas)
 	} else {
@@ -58,8 +56,6 @@ export async function stampPDF(pdfBytes: Uint8Array, config: StampConfig, isReor
 		// Transformation inverse : du système redressé vers le système original tourné
 		switch (rotation) {
 			case 90: // Page originale tournée de 90° -> redressée par PDF.js
-				// Les coordonnées canvas sont basées sur le rendu redressé (width x height)
-				// mais pdf-lib utilise les coordonnées originales (height x width après rotation)
 				finalX = actualY;
 				finalY = pageWidth - actualX;
 				break;
@@ -72,12 +68,10 @@ export async function stampPDF(pdfBytes: Uint8Array, config: StampConfig, isReor
 				finalY = pageHeight - actualX;
 				break;
 			default: // 0° - pas de rotation
-				// Utiliser les valeurs par défaut déjà calculées
 				break;
 		}
 	}
 
-	// Pas de rotation du texte car nous plaçons dans le système de coordonnées original
 	const textRotation = 0;
 
 	console.log("Stamping PDF:", {
@@ -106,12 +100,14 @@ export async function stampPDF(pdfBytes: Uint8Array, config: StampConfig, isReor
 }
 
 export async function getPDFInfo(pdfBytes: Uint8Array) {
+	const { PDFDocument } = await import("pdf-lib");
+
 	const pdfDoc = await PDFDocument.load(pdfBytes);
 	const pages = pdfDoc.getPages();
 
 	return {
 		pageCount: pages.length,
-		pages: pages.map((page, index) => ({
+		pages: pages.map((page, index: number) => ({
 			index,
 			width: page.getWidth(),
 			height: page.getHeight(),
@@ -119,18 +115,11 @@ export async function getPDFInfo(pdfBytes: Uint8Array) {
 	};
 }
 
-/**
- * Stampe un PDF en détectant et corrigeant automatiquement les anomalies d'orientation
- * Si des anomalies sont détectées, crée un nouveau PDF réorienté avec tout le contenu
- */
 export async function stampPDFWithAnomalyDetection(originalFile: File, config: StampConfig): Promise<Uint8Array> {
 	const arrayBuffer = await originalFile.arrayBuffer();
 	const pdfBytes = new Uint8Array(arrayBuffer);
 
-	// Importer les fonctions de réorientation de manière dynamique pour éviter les dépendances circulaires
 	const { needsReorientation, reorientPDF } = await import("./pdfReorientation");
-
-	// Vérifier si le PDF a besoin d'être réorienté
 	const needsReorient = await needsReorientation(pdfBytes);
 
 	let finalPdfBytes = pdfBytes;
@@ -138,15 +127,12 @@ export async function stampPDFWithAnomalyDetection(originalFile: File, config: S
 	if (needsReorient) {
 		console.log("Anomalies d'orientation détectées - Réorientation du PDF...");
 
-		// Créer un nouveau PDF réorienté
 		const reorientedBytes = await reorientPDF(pdfBytes);
 		finalPdfBytes = new Uint8Array(reorientedBytes);
 
 		console.log("PDF réorienté avec succès");
 	}
 
-	// Maintenant que les previews utilisent aussi la réorientation,
-	// les coordonnées sont toujours dans le référentiel du PDF réorienté/correct
 	// Donc on peut toujours utiliser isReoriented = true pour simplifier les calculs
 	return await stampPDF(finalPdfBytes, config, true);
 }

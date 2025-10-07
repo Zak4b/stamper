@@ -2,9 +2,7 @@ import { useState, useRef } from "react";
 import { Dossier, getAllDossiers } from "../lib/database";
 import { stampPDFWithAnomalyDetection, StampPosition } from "../lib/pdfStamper";
 import { FileText, Download, CheckCircle, AlertCircle, CreditCard as Edit2, Loader } from "lucide-react";
-import JSZip from "jszip";
 import { Rectangle } from "tesseract.js";
-import { performOCRWithProgress } from "../lib/ocrHelper";
 
 interface Props {
 	stampPosition: StampPosition;
@@ -53,7 +51,8 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 			});
 
 			try {
-				const result = await performOCRWithProgress(file, ocrPageNumber, ocrRegion, (progress) => {
+				const { performOCRWithProgress } = await import("../lib/ocrHelper");
+				const result = await performOCRWithProgress(file, ocrPageNumber, ocrRegion, (progress: number) => {
 					setPdfFiles((prev) => {
 						const updated = [...prev];
 						if (updated[fileIndex]) {
@@ -180,6 +179,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 	}
 
 	async function downloadAll() {
+		const JSZip = (await import("jszip")).default;
 		const zip = new JSZip();
 
 		pdfFiles.forEach((pdfFile) => {

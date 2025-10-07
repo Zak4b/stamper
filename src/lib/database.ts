@@ -1,4 +1,4 @@
-import initSqlJs, { Database } from "sql.js";
+import initSqlJs from "sql.js";
 
 export interface Dossier {
 	id: number;
@@ -8,40 +8,48 @@ export interface Dossier {
 	updated_at: string;
 }
 
-let SQL: any = null;
-let db: Database | null = null;
+type SQLDatabase = initSqlJs.Database;
 
-export async function initDatabase(): Promise<Database> {
+type SQLLibShape = {
+	Database: new (data?: ArrayLike<number> | Buffer | null) => SQLDatabase;
+};
+
+let SQL: SQLLibShape | null = null;
+let db: SQLDatabase | null = null;
+
+export async function initDatabase(): Promise<SQLDatabase> {
 	if (db) return db;
 
 	if (!SQL) {
-		SQL = await initSqlJs({
+		SQL = (await initSqlJs({
 			locateFile: (file: string) => `/sql.js/${file}`,
-		});
+		})) as unknown as SQLLibShape;
 	}
+
+	const SQLLib = SQL as SQLLibShape;
 
 	const savedData = localStorage.getItem("pdfstamper_db");
 
 	if (savedData) {
 		const binaryData = Uint8Array.from(atob(savedData), (c) => c.charCodeAt(0));
-		db = new SQL.Database(binaryData);
+		db = new SQLLib.Database(binaryData);
 	} else {
-		db = new SQL.Database();
+		db = new SQLLib.Database();
 
 		db.run(`
-      CREATE TABLE IF NOT EXISTS dossiers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        numero_dossier TEXT UNIQUE NOT NULL,
-        valeur_tampon TEXT NOT NULL,
-        created_at TEXT DEFAULT (datetime('now')),
-        updated_at TEXT DEFAULT (datetime('now'))
-      )
-    `);
+	  CREATE TABLE IF NOT EXISTS dossiers (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		numero_dossier TEXT UNIQUE NOT NULL,
+		valeur_tampon TEXT NOT NULL,
+		created_at TEXT DEFAULT (datetime('now')),
+		updated_at TEXT DEFAULT (datetime('now'))
+	  )
+	`);
 
 		saveDatabase();
 	}
 
-	return db;
+	return db as SQLDatabase;
 }
 
 export function saveDatabase() {
@@ -63,11 +71,11 @@ export async function getAllDossiers(): Promise<Dossier[]> {
 	const values = results[0].values;
 
 	for (const row of values) {
-		const dossier: any = {};
-		columns.forEach((col, i) => {
+		const dossier = {} as Record<string, unknown>;
+		columns.forEach((col: string, i: number) => {
 			dossier[col] = row[i];
 		});
-		dossiers.push(dossier as Dossier);
+		dossiers.push(dossier as unknown as Dossier);
 	}
 
 	return dossiers;
@@ -97,13 +105,13 @@ export async function getDossierByNumero(numeroDossier: string): Promise<Dossier
 
 	const columns = results[0].columns;
 	const row = results[0].values[0];
-	const dossier: any = {};
+	const dossier = {} as Record<string, unknown>;
 
-	columns.forEach((col, i) => {
+	columns.forEach((col: string, i: number) => {
 		dossier[col] = row[i];
 	});
 
-	return dossier as Dossier;
+	return dossier as unknown as Dossier;
 }
 
 export async function importDossiers(dossiers: Array<{ numero_dossier: string; valeur_tampon: string }>): Promise<number> {

@@ -22,7 +22,6 @@ export async function detectPDFAnomalies(pdfBytes: Uint8Array): Promise<PDFOrien
 		const height = page.getHeight();
 		const rotation = page.getRotation().angle;
 
-		// Détecter les anomalies d'orientation
 		const isAnomalous = detectAnomalousOrientation(width, height, rotation);
 
 		let correctedRotation = 0;
@@ -57,7 +56,6 @@ export async function detectPDFAnomalies(pdfBytes: Uint8Array): Promise<PDFOrien
  * Détecte si une page a une orientation anormale
  */
 function detectAnomalousOrientation(width: number, height: number, rotation: number): boolean {
-	// Format A4 : 595x841 (portrait) ou 841x595 (paysage)
 	const isA4Landscape = Math.abs(width - 841) < 5 && Math.abs(height - 595) < 5;
 	const isA4Portrait = Math.abs(width - 595) < 5 && Math.abs(height - 841) < 5;
 
