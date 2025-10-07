@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Dossier, getAllDossiers } from "../lib/database";
 import { stampPDFWithAnomalyDetection, StampPosition } from "../lib/pdfStamper";
 import { FileText, Download, CheckCircle, AlertCircle, CreditCard as Edit2, Loader } from "lucide-react";
+import { useToasts } from "../hooks/useToasts";
 import { Rectangle } from "tesseract.js";
 
 interface Props {
@@ -22,6 +23,7 @@ interface PDFFile {
 }
 
 export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }: Props) {
+	const { push } = useToasts();
 	const [pdfFiles, setPdfFiles] = useState<PDFFile[]>([]);
 	const [processing, setProcessing] = useState(false);
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -172,7 +174,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 				}
 			}
 		} catch (error) {
-			alert("Erreur de chargement de la base de données: " + (error instanceof Error ? error.message : "Erreur inconnue"));
+			push({ type: "error", message: "Erreur de chargement de la base de données: " + (error instanceof Error ? error.message : "Erreur inconnue") });
 		}
 
 		setProcessing(false);
