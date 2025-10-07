@@ -94,7 +94,8 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 	function saveEditedNumber(index: number) {
 		updatePdfFile(index, {
 			numeroDossier: editValue,
-			status: "analyzed", // Passage direct en analyzed pour déclencher l'auto-tamponnage
+			status: "analyzed",
+			error: undefined,
 		});
 		setEditingIndex(null);
 		setEditValue("");
@@ -144,7 +145,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 		analyzedFiles.forEach(({ index }) => {
 			processFileAutomatically(index);
 		});
-	}, [pdfFiles, autoStamping, processFileAutomatically]); // Déclenché quand pdfFiles change
+	}, [pdfFiles, autoStamping, processFileAutomatically]);
 
 	async function processAllPDFs() {
 		setProcessing(true);
