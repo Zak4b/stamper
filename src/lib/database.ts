@@ -40,9 +40,7 @@ export async function initDatabase(): Promise<SQLDatabase> {
 	  CREATE TABLE IF NOT EXISTS dossiers (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		numero_dossier TEXT UNIQUE NOT NULL,
-		valeur_tampon TEXT NOT NULL,
-		created_at TEXT DEFAULT (datetime('now')),
-		updated_at TEXT DEFAULT (datetime('now'))
+		valeur_tampon TEXT NOT NULL
 	  )
 	`);
 
