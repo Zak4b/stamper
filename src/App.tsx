@@ -1,67 +1,53 @@
-import { useState } from "react";
-import { StampPosition } from "./lib/pdfStamper";
-import { Rectangle } from "tesseract.js";
 import AppHeader from "./components/ui/AppHeader";
 import NavigationSteps from "./components/ui/NavigationSteps";
-import PageManager from "./components/pages/PageManager";
+import { PDFProvider } from "./contexts/PDFContext";
+import { usePDFContext } from "./hooks/usePDFContext";
+import DatabaseStep from "./components/pages/DatabaseStep";
+import OCRStep from "./components/pages/OCRStep";
+import PositionStep from "./components/pages/PositionStep";
+import StampingStep from "./components/pages/StampingStep";
 
-type Step = "database" | "ocr-region" | "position" | "stamping";
-
-export default function App() {
-	const [currentStep, setCurrentStep] = useState<Step>("database");
-	const [samplePDF, setSamplePDF] = useState<File | null>(null);
-	const [stampPosition, setStampPosition] = useState<StampPosition | null>(null);
-	const [ocrRegion, setOcrRegion] = useState<Rectangle | undefined>(undefined);
-	const [ocrPageNumber, setOcrPageNumber] = useState<number>(0);
-
-	function handleSamplePDFSelected(file: File) {
-		setSamplePDF(file);
-		setCurrentStep("ocr-region");
-	}
-
-	function handleOCRRegionSelected(region: Rectangle | undefined) {
-		setOcrRegion(region);
-	}
-
-	function handleOCRPageChanged(pageNumber: number) {
-		setOcrPageNumber(pageNumber);
-	}
-
-	function continueToStampPosition() {
-		setCurrentStep("position");
-	}
-
-	function handlePositionSelected(position: StampPosition) {
-		setStampPosition(position);
-	}
-
-	function startStamping() {
-		if (stampPosition) {
-			setCurrentStep("stamping");
-		}
-	}
+function AppContent() {
+	const { currentStep, samplePDF, options, setCurrentStep, setSamplePDF, setRegionOCR, setPageOCR, setStampPos } = usePDFContext();
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
 			<div className="max-w-7xl mx-auto px-4 py-8">
 				<AppHeader />
 
-				<NavigationSteps currentStep={currentStep} samplePDF={samplePDF} stampPosition={!!stampPosition} onStepChange={setCurrentStep} />
+				<NavigationSteps currentStep={currentStep} samplePDF={samplePDF} stampPosition={!!options.stampPosition} onStepChange={setCurrentStep} />
 
-				<PageManager
-					currentStep={currentStep}
-					samplePDF={samplePDF}
-					stampPosition={stampPosition}
-					ocrRegion={ocrRegion}
-					ocrPageNumber={ocrPageNumber}
-					onSamplePDFSelected={handleSamplePDFSelected}
-					onOCRRegionSelected={handleOCRRegionSelected}
-					onOCRPageChanged={handleOCRPageChanged}
-					onContinueToStampPosition={continueToStampPosition}
-					onPositionSelected={handlePositionSelected}
-					onStartStamping={startStamping}
-				/>
+				<div className="space-y-6">
+					{currentStep === "database" && <DatabaseStep onSamplePDFSelected={setSamplePDF} />}
+
+					{currentStep === "ocr-region" && samplePDF && (
+						<OCRStep
+							pdfFile={samplePDF}
+							ocrRegion={options.ocrRegion}
+							ocrPageNumber={options.ocrPageNumber}
+							onRegionSelected={setRegionOCR}
+							onPageChanged={setPageOCR}
+							onContinue={() => setCurrentStep("position")}
+						/>
+					)}
+
+					{currentStep === "position" && samplePDF && (
+						<PositionStep pdfFile={samplePDF} stampPosition={options.stampPosition} onPositionSelected={setStampPos} onStartStamping={() => setCurrentStep("stamping")} />
+					)}
+
+					{currentStep === "stamping" && options.stampPosition && (
+						<StampingStep stampPosition={options.stampPosition} ocrRegion={options.ocrRegion} ocrPageNumber={options.ocrPageNumber} />
+					)}
+				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function App() {
+	return (
+		<PDFProvider>
+			<AppContent />
+		</PDFProvider>
 	);
 }
