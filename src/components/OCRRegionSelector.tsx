@@ -7,13 +7,20 @@ interface Props {
 	pdfFile: File;
 	onRegionSelected: (region: Rectangle | undefined) => void;
 	onPageChanged?: (pageNumber: number) => void;
+	currentRegion?: Rectangle; // Région actuelle depuis le context
+	initialPage?: number; // Page initiale depuis le context
 }
 
-export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageChanged }: Props) {
-	const { currentPage, pageCount, canvasRef, goToPage } = usePDFRenderer(pdfFile, { useReorientation: true });
+export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage }: Props) {
+	const { currentPage, pageCount, canvasRef, goToPage } = usePDFRenderer(pdfFile, { useReorientation: true, initialPage });
 	const [isSelecting, setIsSelecting] = useState(false);
 	const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
-	const [region, setRegion] = useState<Rectangle | null>(null);
+	const [region, setRegion] = useState<Rectangle | null>(currentRegion || null);
+
+	// Synchroniser avec la région du context
+	useEffect(() => {
+		setRegion(currentRegion || null);
+	}, [currentRegion]);
 
 	useEffect(() => {
 		onPageChanged?.(currentPage);

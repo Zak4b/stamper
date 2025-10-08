@@ -72,8 +72,6 @@ CREATE TABLE dossiers (
     id INTEGER PRIMARY KEY,
     numero_dossier TEXT UNIQUE,
     valeur_tampon TEXT,
-    created_at TEXT,
-    updated_at TEXT
 );
 ```
 

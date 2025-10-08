@@ -9,7 +9,7 @@ export default function OCRStep() {
 	}
 	return (
 		<>
-			<OCRRegionSelector pdfFile={samplePDF} onRegionSelected={setRegionOCR} onPageChanged={setPageOCR} />
+			<OCRRegionSelector pdfFile={samplePDF} onRegionSelected={setRegionOCR} onPageChanged={setPageOCR} currentRegion={options.ocrRegion} initialPage={options.ocrPageNumber} />
 			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 				<div className="flex items-center justify-between">
 					<div>

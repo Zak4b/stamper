@@ -116,7 +116,10 @@ export default function DatabaseManager() {
 		<>
 			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 				<div className="flex items-center justify-between mb-6">
-					<h2 className="text-xl font-semibold text-gray-900">Base de données des dossiers</h2>
+					<div>
+						<h3 className="text-xl font-semibold text-gray-900">Gestion des dossiers</h3>
+						<p className="text-sm text-gray-500 mt-1">{dossiers.length} dossier{dossiers.length !== 1 ? 's' : ''} enregistré{dossiers.length !== 1 ? 's' : ''}</p>
+					</div>
 					<div className="flex gap-2">
 						<button
 							onClick={() => setConfirmClearOpen(true)}
