@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Dossier, getAllDossiers } from "../lib/database";
-import { stampPDFWithAnomalyDetection, StampPosition } from "../lib/pdfStamper";
-import { FileText, Download, CheckCircle, AlertCircle, CreditCard as Edit2, Loader } from "lucide-react";
-import { useToasts } from "../hooks/useToasts";
+import { StampPosition } from "../lib/pdfStamper";
+import { FileText, Download, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { Rectangle } from "tesseract.js";
 import ProcessingStats from "./ui/ProcessingStats";
+import PDFRow from "./ui/PDFRow";
+import ConfirmModal from "./ui/ConfirmModal";
 import { usePDFContext } from "../hooks/usePDFContext";
+import { type PDFFile } from "../types/PDFFile";
+import { downloadAll, downloadSingle } from "../lib/downloadUtils";
+import { analyzeFile, stampFile, stampAllAnalyzedFiles } from "../lib/pdfProcessingUtils";
 
 interface Props {
 	stampPosition: StampPosition;
@@ -14,24 +17,14 @@ interface Props {
 }
 
 export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }: Props) {
-	const { push } = useToasts();
-	const { loadedPDFs, addPDFs, updatePDF } = usePDFContext();
+	const { loadedPDFs, addPDFs, updatePDF, clearPDFs } = usePDFContext();
 	const [processing, setProcessing] = useState(false);
 	const [autoStamping, setAutoStamping] = useState(true); // File d'attente automatique activée par défaut
-	const [editingIndex, setEditingIndex] = useState<number | null>(null);
-	const [editValue, setEditValue] = useState("");
+	const [showClearConfirm, setShowClearConfirm] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	// Fonction utilitaire pour mettre à jour un fichier spécifique
-	const updatePdfFile = useCallback(
-		(index: number, updates: Partial<(typeof loadedPDFs)[0]>) => {
-			updatePDF(index, updates);
-		},
-		[updatePDF]
-	);
-
 	async function handleFilesSelected(files: FileList) {
-		const newFiles = Array.from(files)
+		const newFiles: PDFFile[] = Array.from(files)
 			.filter((f) => f.type === "application/pdf")
 			.map((file) => ({
 				file,
@@ -42,177 +35,48 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 
 		addPDFs(newFiles);
 
+		// Analyser chaque nouveau fichier avec OCR
 		for (let i = loadedPDFs.length; i < loadedPDFs.length + newFiles.length; i++) {
 			const fileIndex = i;
 			const file = newFiles[i - loadedPDFs.length].file;
-
-			updatePdfFile(fileIndex, { status: "ocr" });
-
-			try {
-				const { performOCRWithProgress } = await import("../lib/ocrHelper");
-				const result = await performOCRWithProgress(file, ocrPageNumber, ocrRegion, (progress: number) => {
-					updatePdfFile(fileIndex, { ocrProgress: progress });
-				});
-
-				const detectedNumber = result.detectedNumbers[0] || "NON DÉTECTÉ";
-
-				updatePdfFile(fileIndex, {
-					numeroDossier: detectedNumber,
-					status: "analyzed",
-					ocrConfidence: result.confidence,
-					detectedNumbers: result.detectedNumbers,
-					ocrProgress: 100,
-				});
-			} catch (error) {
-				updatePdfFile(fileIndex, {
-					numeroDossier: "ERREUR OCR",
-					status: "error",
-					error: error instanceof Error ? error.message : "Erreur OCR",
-				});
-			}
+			await analyzeFile(fileIndex, file, ocrPageNumber, ocrRegion, updatePDF);
 		}
 	}
 
-	function startEditingNumber(index: number, currentValue: string) {
-		setEditingIndex(index);
-		setEditValue(currentValue);
+	function handleClearPDFs() {
+		clearPDFs();
+		setShowClearConfirm(false);
 	}
 
-	function saveEditedNumber(index: number) {
-		updatePdfFile(index, {
-			numeroDossier: editValue,
-			status: "analyzed",
-			error: undefined,
-		});
-		setEditingIndex(null);
-		setEditValue("");
+	function handleDownloadSingle(pdfFile: PDFFile) {
+		downloadSingle(pdfFile);
 	}
 
-	// Fonction pour traiter automatiquement un seul fichier
-	const processFileAutomatically = useCallback(
-		async (fileIndex: number) => {
-			if (!autoStamping) return;
-
-			const pdfFile = loadedPDFs[fileIndex];
-			if (!pdfFile || pdfFile.status !== "analyzed") return;
-
-			try {
-				const dossiers = await getAllDossiers();
-				const dossier = dossiers.find((d) => d.numero_dossier === pdfFile.numeroDossier);
-
-				// Marquer comme en cours de tamponnage
-				updatePdfFile(fileIndex, { status: "processing" });
-				if (!dossier) {
-					updatePdfFile(fileIndex, { status: "error", error: "Numéro de dossier non trouvé dans la base de données" });
-					return;
-				}
-
-				const stampedBytes = await stampPDFWithAnomalyDetection(pdfFile.file, {
-					position: stampPosition,
-					text: dossier.valeur_tampon,
-					fontSize: 14,
-					color: { r: 0, g: 0, b: 0 },
-				});
-
-				updatePdfFile(fileIndex, { status: "completed", stampedData: stampedBytes });
-			} catch (error) {
-				updatePdfFile(fileIndex, { status: "error", error: error instanceof Error ? error.message : "Erreur de tamponnage" });
-			}
+	const processPDF = useCallback(
+		async (file: PDFFile, fileIndex: number) => {
+			if (file.status !== "analyzed") return;
+			await stampFile(fileIndex, file, stampPosition, updatePDF);
 		},
-		[autoStamping, loadedPDFs, stampPosition, updatePdfFile]
+		[stampPosition, updatePDF]
 	);
 
-	// Surveiller les fichiers analyzed et les traiter automatiquement
+	// Surveiller les fichiers analyzed et les tamponner automatiquement
 	useEffect(() => {
 		if (!autoStamping) return;
 
+		// Tamponner automatiquement les fichiers analyzed
 		const analyzedFiles = loadedPDFs.map((file, index) => ({ file, index })).filter(({ file }) => file.status === "analyzed");
-
-		// Traiter automatiquement les fichiers analyzed un par un
-		analyzedFiles.forEach(({ index }) => {
-			processFileAutomatically(index);
-		});
-	}, [loadedPDFs, autoStamping, processFileAutomatically]);
+		analyzedFiles.forEach(({ file, index }) => processPDF(file, index));
+	}, [loadedPDFs, autoStamping, processPDF]);
 
 	async function processAllPDFs() {
+		if (processing) return;
 		setProcessing(true);
-
-		try {
-			const dossiers = await getAllDossiers();
-			const dossierMap = new Map<string, Dossier>();
-			dossiers.forEach((d) => dossierMap.set(d.numero_dossier, d));
-
-			for (let i = 0; i < loadedPDFs.length; i++) {
-				const pdfFile = loadedPDFs[i];
-
-				// Traiter seulement les fichiers analyzed ou ceux avec des erreurs OCR récupérables
-				if (pdfFile.status !== "analyzed" && pdfFile.status !== "pending") {
-					continue;
-				}
-				const dossier = dossierMap.get(pdfFile.numeroDossier);
-
-				if (!dossier) {
-					updatePdfFile(i, {
-						status: "error",
-						error: "Numéro de dossier non trouvé dans la base de données",
-					});
-					continue;
-				}
-
-				try {
-					const stampedBytes = await stampPDFWithAnomalyDetection(pdfFile.file, {
-						position: stampPosition,
-						text: dossier.valeur_tampon,
-						fontSize: 14,
-						color: { r: 0, g: 0, b: 0 },
-					});
-
-					updatePdfFile(i, {
-						status: "completed",
-						stampedData: stampedBytes,
-					});
-				} catch (error) {
-					updatePdfFile(i, {
-						status: "error",
-						error: error instanceof Error ? error.message : "Erreur inconnue",
-					});
-				}
-			}
-		} catch (error) {
-			push({ type: "error", message: "Erreur de chargement de la base de données: " + (error instanceof Error ? error.message : "Erreur inconnue") });
-		}
-
+		await stampAllAnalyzedFiles(loadedPDFs, stampPosition, updatePDF);
 		setProcessing(false);
 	}
 
-	async function downloadAll() {
-		const JSZip = (await import("jszip")).default;
-		const zip = new JSZip();
-
-		loadedPDFs.forEach((pdfFile) => {
-			if (pdfFile.status === "completed" && pdfFile.stampedData) {
-				zip.file(`${pdfFile.numeroDossier}_tamponné.pdf`, new Uint8Array(pdfFile.stampedData));
-			}
-		});
-
-		const content = await zip.generateAsync({ type: "blob" });
-		const url = URL.createObjectURL(content);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = "pdfs_tamponnés.zip";
-		a.click();
-	}
-
-	async function downloadSingle(pdfFile: (typeof loadedPDFs)[0]) {
-		if (!pdfFile.stampedData) return;
-
-		const blob = new Blob([new Uint8Array(pdfFile.stampedData)], { type: "application/pdf" });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = `${pdfFile.numeroDossier}_tamponné.pdf`;
-		a.click();
-	}
+	const handleDownloadAll = async () => await downloadAll(loadedPDFs);
 
 	const completedCount = loadedPDFs.filter((f) => f.status === "completed").length;
 	const errorCount = loadedPDFs.filter((f) => f.status === "error").length;
@@ -249,6 +113,13 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 					</label>
 					{loadedPDFs.length > 0 && (
 						<>
+							<button
+								onClick={() => setShowClearConfirm(true)}
+								className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+							>
+								<Trash2 className="w-4 h-4" />
+								Effacer tout
+							</button>
 							{!autoStamping && (
 								<button
 									onClick={processAllPDFs}
@@ -259,7 +130,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 								</button>
 							)}
 							{completedCount > 0 && (
-								<button onClick={downloadAll} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
+								<button onClick={handleDownloadAll} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
 									<Download className="w-4 h-4" />
 									Télécharger tout (ZIP)
 								</button>
@@ -314,77 +185,21 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 
 					<div className="space-y-2 max-h-96 overflow-y-auto">
 						{loadedPDFs.map((pdfFile, index) => (
-							<div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-								<div className="flex items-center gap-3 flex-1">
-									<FileText className="w-5 h-5 text-gray-400" />
-									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium text-gray-900 truncate">{pdfFile.file.name}</p>
-										{editingIndex === index ? (
-											<div className="flex items-center gap-2 mt-1">
-												<input
-													type="text"
-													value={editValue}
-													onChange={(e) => setEditValue(e.target.value)}
-													className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-													placeholder="Numéro de dossier"
-												/>
-												<button onClick={() => saveEditedNumber(index)} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
-													OK
-												</button>
-												<button onClick={() => setEditingIndex(null)} className="px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
-													Annuler
-												</button>
-											</div>
-										) : (
-											<div className="flex items-center gap-2">
-												<p className="text-xs text-gray-500">
-													Dossier: {pdfFile.numeroDossier || "En attente..."}
-													{pdfFile.ocrConfidence && <span className="ml-2 text-gray-400">({Math.round(pdfFile.ocrConfidence)}% confiance)</span>}
-												</p>
-												{pdfFile.status !== "ocr" && pdfFile.numeroDossier && (
-													<button onClick={() => startEditingNumber(index, pdfFile.numeroDossier)} className="text-gray-400 hover:text-blue-600" title="Modifier le numéro">
-														<Edit2 className="w-3 h-3" />
-													</button>
-												)}
-											</div>
-										)}
-										{pdfFile.detectedNumbers && pdfFile.detectedNumbers.length > 1 && (
-											<p className="text-xs text-gray-400 mt-1">Autres détectés: {pdfFile.detectedNumbers.slice(1, 3).join(", ")}</p>
-										)}
-										{pdfFile.error && <p className="text-xs text-red-600 mt-1">{pdfFile.error}</p>}
-									</div>
-								</div>
-
-								<div className="flex items-center gap-3">
-									{pdfFile.status === "ocr" && (
-										<div className="flex items-center gap-2">
-											<Loader className="w-4 h-4 text-blue-600 animate-spin" />
-											<span className="text-xs text-blue-600 font-medium">OCR {Math.round(pdfFile.ocrProgress || 0)}%</span>
-										</div>
-									)}
-									{pdfFile.status === "pending" && <span className="text-xs text-gray-500">En attente</span>}
-									{pdfFile.status === "analyzed" && <span className="text-xs text-green-600 font-medium">Analysé ✓</span>}
-									{pdfFile.status === "processing" && (
-										<div className="flex items-center gap-2">
-											<Loader className="w-4 h-4 text-indigo-600 animate-spin" />
-											<span className="text-xs text-indigo-600 font-medium">Tamponnage...</span>
-										</div>
-									)}
-									{pdfFile.status === "completed" && (
-										<>
-											<CheckCircle className="w-5 h-5 text-green-600" />
-											<button onClick={() => downloadSingle(pdfFile)} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-												Télécharger
-											</button>
-										</>
-									)}
-									{pdfFile.status === "error" && <AlertCircle className="w-5 h-5 text-red-600" />}
-								</div>
-							</div>
+							<PDFRow key={index} pdfFile={pdfFile} index={index} onUpdatePDF={updatePDF} onDownload={handleDownloadSingle} />
 						))}
 					</div>
 				</>
 			)}
+
+			<ConfirmModal
+				isOpen={showClearConfirm}
+				title="Effacer tous les PDFs"
+				description={`Êtes-vous sûr de vouloir supprimer tous les ${loadedPDFs.length} PDF(s) de la liste ? Cette action est irréversible.`}
+				confirmLabel="Effacer tout"
+				cancelLabel="Annuler"
+				onConfirm={handleClearPDFs}
+				onCancel={() => setShowClearConfirm(false)}
+			/>
 		</div>
 	);
 }

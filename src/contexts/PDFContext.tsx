@@ -1,19 +1,9 @@
 import { useState, ReactNode, createContext } from "react";
 import { StampPosition } from "../lib/pdfStamper";
 import { Rectangle } from "tesseract.js";
+import { type PDFFile } from "../types/PDFFile";
 
 type Step = "database" | "ocr-region" | "position" | "stamping";
-
-interface PDFFile {
-	file: File;
-	numeroDossier: string;
-	status: "pending" | "ocr" | "analyzed" | "processing" | "completed" | "error";
-	error?: string;
-	stampedData?: Uint8Array;
-	ocrConfidence?: number;
-	detectedNumbers?: string[];
-	ocrProgress?: number;
-}
 
 interface Options {
 	ocrRegion?: Rectangle;
