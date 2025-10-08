@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Rectangle } from "tesseract.js";
 import { Search } from "lucide-react";
 import { usePDFRenderer } from "../hooks/usePDFRenderer";
@@ -16,15 +16,29 @@ export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageCha
 	const [isSelecting, setIsSelecting] = useState(false);
 	const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
 	const [region, setRegion] = useState<Rectangle | null>(currentRegion || null);
+	const isInitialMount = useRef(true);
 
 	// Synchroniser avec la région du context
 	useEffect(() => {
 		setRegion(currentRegion || null);
 	}, [currentRegion]);
 
+	// Stable callback pour éviter les re-renders
+	const stableOnPageChanged = useCallback(
+		(page: number) => {
+			onPageChanged?.(page);
+		},
+		[onPageChanged]
+	);
+
+	// Appeler onPageChanged seulement après la première initialisation
 	useEffect(() => {
-		onPageChanged?.(currentPage);
-	}, [currentPage, onPageChanged]);
+		if (isInitialMount.current) {
+			isInitialMount.current = false;
+			return;
+		}
+		stableOnPageChanged(currentPage);
+	}, [currentPage, stableOnPageChanged]);
 
 	function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
 		const canvas = canvasRef.current;

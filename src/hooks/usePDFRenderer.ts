@@ -14,12 +14,12 @@ export function usePDFRenderer(pdfFile: File, options: UsePDFRendererOptions = {
 	const stableOptions = useRef(options);
 	stableOptions.current = options;
 
-	// Synchroniser avec la page initiale
+	// Synchroniser avec la page initiale seulement quand initialPage change
 	useEffect(() => {
-		if (options.initialPage !== undefined && options.initialPage !== currentPage) {
+		if (options.initialPage !== undefined) {
 			setCurrentPage(options.initialPage);
 		}
-	}, [options.initialPage, currentPage]);
+	}, [options.initialPage]);
 
 	const loadPDF = useCallback(async () => {
 		if (!canvasRef.current) return;

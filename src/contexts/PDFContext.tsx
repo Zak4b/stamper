@@ -1,4 +1,4 @@
-import { useState, ReactNode, createContext } from "react";
+import { useState, ReactNode, createContext, useCallback } from "react";
 import { StampPosition } from "../lib/pdfStamper";
 import { Rectangle } from "tesseract.js";
 import { type PDFFile } from "../types/PDFFile";
@@ -53,16 +53,16 @@ export function PDFProvider({ children }: PDFProviderProps) {
 		stampPosition: null,
 	});
 
-	const updateOptions = (updates: Partial<Options>) => {
+	const updateOptions = useCallback((updates: Partial<Options>) => {
 		setOptions((prev) => ({ ...prev, ...updates }));
-	};
+	}, []);
 
 	// Batch PDFs functions
-	const addPDFs = (files: PDFFile[]) => {
+	const addPDFs = useCallback((files: PDFFile[]) => {
 		setLoadedPDFs((prev) => [...prev, ...files]);
-	};
+	}, []);
 
-	const updatePDF = (index: number, updates: Partial<PDFFile>) => {
+	const updatePDF = useCallback((index: number, updates: Partial<PDFFile>) => {
 		setLoadedPDFs((prev) => {
 			const updated = [...prev];
 			if (updated[index]) {
@@ -70,27 +70,36 @@ export function PDFProvider({ children }: PDFProviderProps) {
 			}
 			return updated;
 		});
-	};
+	}, []);
 
-	const clearPDFs = () => setLoadedPDFs([]);
+	const clearPDFs = useCallback(() => setLoadedPDFs([]), []);
 
 	// Actions
-	const handleSamplePDFSelected = (file: File | null) => {
+	const handleSamplePDFSelected = useCallback((file: File | null) => {
 		setSamplePDF(file);
 		setCurrentStep("ocr-region");
-	};
+	}, []);
 
-	const setRegionOCR = (region: Rectangle | undefined) => {
-		updateOptions({ ocrRegion: region });
-	};
+	const setRegionOCR = useCallback(
+		(region: Rectangle | undefined) => {
+			updateOptions({ ocrRegion: region });
+		},
+		[updateOptions]
+	);
 
-	const setPageOCR = (pageNumber: number) => {
-		updateOptions({ ocrPageNumber: pageNumber });
-	};
+	const setPageOCR = useCallback(
+		(pageNumber: number) => {
+			updateOptions({ ocrPageNumber: pageNumber });
+		},
+		[updateOptions]
+	);
 
-	const setStampPos = (position: StampPosition) => {
-		updateOptions({ stampPosition: position });
-	};
+	const setStampPos = useCallback(
+		(position: StampPosition) => {
+			updateOptions({ stampPosition: position });
+		},
+		[updateOptions]
+	);
 
 	// Computed properties
 	const canProceedToPosition = Boolean(samplePDF && options.ocrRegion);
