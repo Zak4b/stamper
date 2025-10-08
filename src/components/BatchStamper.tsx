@@ -5,6 +5,7 @@ import { FileText, Download, CheckCircle, AlertCircle, CreditCard as Edit2, Load
 import { useToasts } from "../hooks/useToasts";
 import { Rectangle } from "tesseract.js";
 import ProcessingStats from "./ui/ProcessingStats";
+import { usePDFContext } from "../hooks/usePDFContext";
 
 interface Props {
 	stampPosition: StampPosition;
@@ -12,20 +13,9 @@ interface Props {
 	ocrPageNumber: number;
 }
 
-interface PDFFile {
-	file: File;
-	numeroDossier: string;
-	status: "pending" | "ocr" | "analyzed" | "processing" | "completed" | "error";
-	error?: string;
-	stampedData?: Uint8Array;
-	ocrConfidence?: number;
-	detectedNumbers?: string[];
-	ocrProgress?: number;
-}
-
 export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }: Props) {
 	const { push } = useToasts();
-	const [pdfFiles, setPdfFiles] = useState<PDFFile[]>([]);
+	const { loadedPDFs, addPDFs, updatePDF } = usePDFContext();
 	const [processing, setProcessing] = useState(false);
 	const [autoStamping, setAutoStamping] = useState(true); // File d'attente automatique activée par défaut
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -33,18 +23,15 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	// Fonction utilitaire pour mettre à jour un fichier spécifique
-	const updatePdfFile = useCallback((index: number, updates: Partial<PDFFile>) => {
-		setPdfFiles((prev) => {
-			const updated = [...prev];
-			if (updated[index]) {
-				updated[index] = { ...updated[index], ...updates };
-			}
-			return updated;
-		});
-	}, []);
+	const updatePdfFile = useCallback(
+		(index: number, updates: Partial<(typeof loadedPDFs)[0]>) => {
+			updatePDF(index, updates);
+		},
+		[updatePDF]
+	);
 
 	async function handleFilesSelected(files: FileList) {
-		const newFiles: PDFFile[] = Array.from(files)
+		const newFiles = Array.from(files)
 			.filter((f) => f.type === "application/pdf")
 			.map((file) => ({
 				file,
@@ -53,11 +40,11 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 				ocrProgress: 0,
 			}));
 
-		setPdfFiles((prev) => [...prev, ...newFiles]);
+		addPDFs(newFiles);
 
-		for (let i = pdfFiles.length; i < pdfFiles.length + newFiles.length; i++) {
+		for (let i = loadedPDFs.length; i < loadedPDFs.length + newFiles.length; i++) {
 			const fileIndex = i;
-			const file = newFiles[i - pdfFiles.length].file;
+			const file = newFiles[i - loadedPDFs.length].file;
 
 			updatePdfFile(fileIndex, { status: "ocr" });
 
@@ -106,7 +93,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 		async (fileIndex: number) => {
 			if (!autoStamping) return;
 
-			const pdfFile = pdfFiles[fileIndex];
+			const pdfFile = loadedPDFs[fileIndex];
 			if (!pdfFile || pdfFile.status !== "analyzed") return;
 
 			try {
@@ -132,20 +119,20 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 				updatePdfFile(fileIndex, { status: "error", error: error instanceof Error ? error.message : "Erreur de tamponnage" });
 			}
 		},
-		[autoStamping, pdfFiles, stampPosition, updatePdfFile]
+		[autoStamping, loadedPDFs, stampPosition, updatePdfFile]
 	);
 
 	// Surveiller les fichiers analyzed et les traiter automatiquement
 	useEffect(() => {
 		if (!autoStamping) return;
 
-		const analyzedFiles = pdfFiles.map((file, index) => ({ file, index })).filter(({ file }) => file.status === "analyzed");
+		const analyzedFiles = loadedPDFs.map((file, index) => ({ file, index })).filter(({ file }) => file.status === "analyzed");
 
 		// Traiter automatiquement les fichiers analyzed un par un
 		analyzedFiles.forEach(({ index }) => {
 			processFileAutomatically(index);
 		});
-	}, [pdfFiles, autoStamping, processFileAutomatically]);
+	}, [loadedPDFs, autoStamping, processFileAutomatically]);
 
 	async function processAllPDFs() {
 		setProcessing(true);
@@ -155,8 +142,8 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 			const dossierMap = new Map<string, Dossier>();
 			dossiers.forEach((d) => dossierMap.set(d.numero_dossier, d));
 
-			for (let i = 0; i < pdfFiles.length; i++) {
-				const pdfFile = pdfFiles[i];
+			for (let i = 0; i < loadedPDFs.length; i++) {
+				const pdfFile = loadedPDFs[i];
 
 				// Traiter seulement les fichiers analyzed ou ceux avec des erreurs OCR récupérables
 				if (pdfFile.status !== "analyzed" && pdfFile.status !== "pending") {
@@ -202,7 +189,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 		const JSZip = (await import("jszip")).default;
 		const zip = new JSZip();
 
-		pdfFiles.forEach((pdfFile) => {
+		loadedPDFs.forEach((pdfFile) => {
 			if (pdfFile.status === "completed" && pdfFile.stampedData) {
 				zip.file(`${pdfFile.numeroDossier}_tamponné.pdf`, new Uint8Array(pdfFile.stampedData));
 			}
@@ -216,7 +203,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 		a.click();
 	}
 
-	async function downloadSingle(pdfFile: PDFFile) {
+	async function downloadSingle(pdfFile: (typeof loadedPDFs)[0]) {
 		if (!pdfFile.stampedData) return;
 
 		const blob = new Blob([new Uint8Array(pdfFile.stampedData)], { type: "application/pdf" });
@@ -227,20 +214,20 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 		a.click();
 	}
 
-	const completedCount = pdfFiles.filter((f) => f.status === "completed").length;
-	const errorCount = pdfFiles.filter((f) => f.status === "error").length;
-	const ocrCount = pdfFiles.filter((f) => f.status === "ocr").length;
-	const analyzedCount = pdfFiles.filter((f) => f.status === "analyzed").length;
-	const processingCount = pdfFiles.filter((f) => f.status === "processing").length;
-	const pendingCount = pdfFiles.filter((f) => f.status === "pending").length;
-	const totalCount = pdfFiles.length;
+	const completedCount = loadedPDFs.filter((f) => f.status === "completed").length;
+	const errorCount = loadedPDFs.filter((f) => f.status === "error").length;
+	const ocrCount = loadedPDFs.filter((f) => f.status === "ocr").length;
+	const analyzedCount = loadedPDFs.filter((f) => f.status === "analyzed").length;
+	const processingCount = loadedPDFs.filter((f) => f.status === "processing").length;
+	const pendingCount = loadedPDFs.filter((f) => f.status === "pending").length;
+	const totalCount = loadedPDFs.length;
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
 					<h2 className="text-xl font-semibold text-gray-900">Traitement par lot</h2>
-					{pdfFiles.length > 0 && (
+					{loadedPDFs.length > 0 && (
 						<div className="flex items-center gap-2 mt-2">
 							<label className="flex items-center gap-2 text-sm text-gray-600">
 								<input
@@ -260,7 +247,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 						<span className="text-sm font-medium">Charger des PDFs</span>
 						<input ref={fileInputRef} type="file" multiple accept=".pdf" className="hidden" onChange={(e) => e.target.files && handleFilesSelected(e.target.files)} />
 					</label>
-					{pdfFiles.length > 0 && (
+					{loadedPDFs.length > 0 && (
 						<>
 							{!autoStamping && (
 								<button
@@ -296,7 +283,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 				/>
 			)}
 
-			{pdfFiles.length === 0 ? (
+			{loadedPDFs.length === 0 ? (
 				<div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
 					<FileText className="w-12 h-12 mx-auto mb-3 text-gray-400" />
 					<p>Aucun PDF chargé. Cliquez sur "Charger des PDFs" pour commencer.</p>
@@ -326,7 +313,7 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 					)}
 
 					<div className="space-y-2 max-h-96 overflow-y-auto">
-						{pdfFiles.map((pdfFile, index) => (
+						{loadedPDFs.map((pdfFile, index) => (
 							<div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
 								<div className="flex items-center gap-3 flex-1">
 									<FileText className="w-5 h-5 text-gray-400" />

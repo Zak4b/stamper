@@ -4,6 +4,17 @@ import { Rectangle } from "tesseract.js";
 
 type Step = "database" | "ocr-region" | "position" | "stamping";
 
+interface PDFFile {
+	file: File;
+	numeroDossier: string;
+	status: "pending" | "ocr" | "analyzed" | "processing" | "completed" | "error";
+	error?: string;
+	stampedData?: Uint8Array;
+	ocrConfidence?: number;
+	detectedNumbers?: string[];
+	ocrProgress?: number;
+}
+
 interface Options {
 	ocrRegion?: Rectangle;
 	ocrPageNumber: number;
@@ -17,9 +28,10 @@ interface PDFContextType {
 	// PDF files
 	samplePDF: File | null;
 	setSamplePDF: (file: File | null) => void;
-	loadedPDFs: File[];
-	addPDF: (file: File) => void;
-	removePDF: (file: File) => void;
+	loadedPDFs: PDFFile[];
+
+	addPDFs: (files: PDFFile[]) => void;
+	updatePDF: (index: number, updates: Partial<PDFFile>) => void;
 	clearPDFs: () => void;
 
 	// Options
@@ -45,7 +57,7 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
 export function PDFProvider({ children }: PDFProviderProps) {
 	const [currentStep, setCurrentStep] = useState<Step>("database");
 	const [samplePDF, setSamplePDF] = useState<File | null>(null);
-	const [loadedPDFs, setLoadedPDFs] = useState<File[]>([]);
+	const [loadedPDFs, setLoadedPDFs] = useState<PDFFile[]>([]);
 	const [options, setOptions] = useState<Options>({
 		ocrPageNumber: 0,
 		stampPosition: null,
@@ -55,17 +67,19 @@ export function PDFProvider({ children }: PDFProviderProps) {
 		setOptions((prev) => ({ ...prev, ...updates }));
 	};
 
-	const addPDF = (file: File) => {
-		setLoadedPDFs((prev) => {
-			if (prev.find((pdf) => pdf.name === file.name)) {
-				return prev;
-			}
-			return [...prev, file];
-		});
+	// Batch PDFs functions
+	const addPDFs = (files: PDFFile[]) => {
+		setLoadedPDFs((prev) => [...prev, ...files]);
 	};
 
-	const removePDF = (file: File) => {
-		setLoadedPDFs((prev) => prev.filter((pdf) => pdf !== file));
+	const updatePDF = (index: number, updates: Partial<PDFFile>) => {
+		setLoadedPDFs((prev) => {
+			const updated = [...prev];
+			if (updated[index]) {
+				updated[index] = { ...updated[index], ...updates };
+			}
+			return updated;
+		});
 	};
 
 	const clearPDFs = () => setLoadedPDFs([]);
@@ -101,8 +115,8 @@ export function PDFProvider({ children }: PDFProviderProps) {
 		samplePDF,
 		setSamplePDF: handleSamplePDFSelected,
 		loadedPDFs,
-		addPDF,
-		removePDF,
+		addPDFs,
+		updatePDF,
 		clearPDFs,
 
 		// Options

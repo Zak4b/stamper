@@ -1,19 +1,8 @@
-import { Suspense } from "react";
-import { Rectangle } from "tesseract.js";
 import BatchStamper from "../BatchStamper";
-import { StampPosition } from "../../lib/pdfStamper";
-import LoadingSpinner from "../ui/LoadingSpinner";
+import { usePDFContext } from "../../hooks/usePDFContext";
 
-interface StampingStepProps {
-	stampPosition: StampPosition;
-	ocrRegion: Rectangle | undefined;
-	ocrPageNumber: number;
-}
+export default function StampingStep() {
+	const { options } = usePDFContext();
 
-export default function StampingStep({ stampPosition, ocrRegion, ocrPageNumber }: StampingStepProps) {
-	return (
-		<Suspense fallback={<LoadingSpinner />}>
-			<BatchStamper stampPosition={stampPosition} ocrRegion={ocrRegion} ocrPageNumber={ocrPageNumber} />
-		</Suspense>
-	);
+	return <BatchStamper stampPosition={options.stampPosition!} ocrRegion={options.ocrRegion} ocrPageNumber={options.ocrPageNumber} />;
 }

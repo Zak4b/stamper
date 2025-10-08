@@ -1,14 +1,17 @@
 import AppHeader from "./components/ui/AppHeader";
+import LoadingSpinner from "./components/ui/LoadingSpinner";
 import NavigationSteps from "./components/ui/NavigationSteps";
 import { PDFProvider } from "./contexts/PDFContext";
 import { usePDFContext } from "./hooks/usePDFContext";
-import DatabaseStep from "./components/pages/DatabaseStep";
-import OCRStep from "./components/pages/OCRStep";
-import PositionStep from "./components/pages/PositionStep";
-import StampingStep from "./components/pages/StampingStep";
+import { lazy, Suspense } from "react";
+
+const DatabaseStep = lazy(() => import("./components/pages/DatabaseStep"));
+const OCRStep = lazy(() => import("./components/pages/OCRStep"));
+const PositionStep = lazy(() => import("./components/pages/PositionStep"));
+const StampingStep = lazy(() => import("./components/pages/StampingStep"));
 
 function AppContent() {
-	const { currentStep, samplePDF, options, setCurrentStep, setSamplePDF, setRegionOCR, setPageOCR, setStampPos } = usePDFContext();
+	const { currentStep, samplePDF, options, setCurrentStep } = usePDFContext();
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -16,29 +19,17 @@ function AppContent() {
 				<AppHeader />
 
 				<NavigationSteps currentStep={currentStep} samplePDF={samplePDF} stampPosition={!!options.stampPosition} onStepChange={setCurrentStep} />
+				<Suspense fallback={<LoadingSpinner />}>
+					<div className="space-y-6">
+						{currentStep === "database" && <DatabaseStep />}
 
-				<div className="space-y-6">
-					{currentStep === "database" && <DatabaseStep onSamplePDFSelected={setSamplePDF} />}
+						{currentStep === "ocr-region" && <OCRStep />}
 
-					{currentStep === "ocr-region" && samplePDF && (
-						<OCRStep
-							pdfFile={samplePDF}
-							ocrRegion={options.ocrRegion}
-							ocrPageNumber={options.ocrPageNumber}
-							onRegionSelected={setRegionOCR}
-							onPageChanged={setPageOCR}
-							onContinue={() => setCurrentStep("position")}
-						/>
-					)}
+						{currentStep === "position" && <PositionStep />}
 
-					{currentStep === "position" && samplePDF && (
-						<PositionStep pdfFile={samplePDF} stampPosition={options.stampPosition} onPositionSelected={setStampPos} onStartStamping={() => setCurrentStep("stamping")} />
-					)}
-
-					{currentStep === "stamping" && options.stampPosition && (
-						<StampingStep stampPosition={options.stampPosition} ocrRegion={options.ocrRegion} ocrPageNumber={options.ocrPageNumber} />
-					)}
-				</div>
+						{currentStep === "stamping" && <StampingStep />}
+					</div>
+				</Suspense>
 			</div>
 		</div>
 	);
