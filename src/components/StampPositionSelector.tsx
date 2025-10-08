@@ -12,7 +12,7 @@ interface Props {
 export default function StampPositionSelector({ pdfFile, onPositionSelected, currentPosition }: Props) {
 	const { currentPage, pageCount, canvasRef, goToPage } = usePDFRenderer(pdfFile, { useReorientation: true });
 	const { getCanvasCoordinates } = useCanvasCoordinates();
-	const [position, setPosition] = useState<StampPosition>(currentPosition || { x: 50, y: 50, page: 0 });
+	const [position, setPosition] = useState<StampPosition | null>(currentPosition || null);
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
@@ -22,7 +22,7 @@ export default function StampPositionSelector({ pdfFile, onPositionSelected, cur
 		const coords = getCanvasCoordinates(e, canvas);
 		const { x, y } = coords;
 
-		const newPosition = { x, y, page: currentPage };
+		const newPosition: StampPosition = { x, y, page: currentPage };
 		setPosition(newPosition);
 		onPositionSelected(newPosition);
 	}
