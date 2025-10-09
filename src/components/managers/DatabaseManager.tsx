@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as deleteDossierDB, importDossiers } from "../lib/database";
-import { autoDetectDelimiter, parseCSV } from "../lib/csvHelper";
-import CSVImportModal from "./ui/CSVImportModal";
+import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as deleteDossierDB, importDossiers } from "../../lib/database";
+import { autoDetectDelimiter, parseCSV } from "../../lib/csvHelper";
+import CSVImportModal from "../modals/CSVImportModal";
 import { Plus, Trash2, Upload, Download } from "lucide-react";
-import ConfirmModal from "./ui/ConfirmModal";
-import { clearAllDossiers } from "../lib/database";
-import { useToasts } from "../hooks/useToasts";
+import ConfirmModal from "../modals/ConfirmModal";
+import { clearAllDossiers } from "../../lib/database";
+import { useToasts } from "../../hooks/useToasts";
 
 const DatabaseManager: React.FC = () => {
 	const { push } = useToasts();

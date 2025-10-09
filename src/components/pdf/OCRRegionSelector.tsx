@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Rectangle } from "tesseract.js";
 import { Search } from "lucide-react";
-import { usePDFRenderingContext } from "../hooks/usePDFRenderingContext";
+import { usePDFRenderingContext } from "../../hooks/usePDFRenderingContext";
 import PDFRenderer from "./PDFRenderer";
 
 interface Props {
@@ -116,9 +116,11 @@ const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageC
 	}
 
 	const additionalControls = (
-		<button onClick={handleUseFullPage} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium">
-			Utiliser la page complète
-		</button>
+		<>
+			<button onClick={handleUseFullPage} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium">
+				Utiliser la page complète
+			</button>
+		</>
 	);
 
 	return (

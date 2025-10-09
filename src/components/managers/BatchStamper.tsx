@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { StampPosition } from "../lib/pdfStamper";
+import { StampPosition } from "../../lib/pdfStamper";
 import { FileText, Download, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { Rectangle } from "tesseract.js";
-import ProcessingStats from "./progress/ProcessingStats";
-import PDFRow from "./pdf/PDFRow";
-import ConfirmModal from "./modals/ConfirmModal";
-import { usePDFContext } from "../hooks/usePDFContext";
-import { type PDFFile } from "../types/PDFFile";
-import { downloadAll, downloadSingle } from "../lib/downloadUtils";
-import { analyzeFile, stampFile, stampAllAnalyzedFiles } from "../lib/pdfProcessingUtils";
+import ProcessingStats from "../progress/ProcessingStats";
+import PDFRow from "../pdf/PDFRow";
+import ConfirmModal from "../modals/ConfirmModal";
+import { usePDFContext } from "../../hooks/usePDFContext";
+import { type PDFFile } from "../../types/PDFFile";
+import { downloadAll, downloadSingle } from "../../lib/downloadUtils";
+import { analyzeFile, stampFile, stampAllAnalyzedFiles } from "../../lib/pdfProcessingUtils";
 
 interface Props {
 	stampPosition: StampPosition;

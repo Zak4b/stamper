@@ -1,8 +1,8 @@
 import React, { ReactNode } from "react";
-import { usePDFRenderer } from "../hooks/usePDFRenderer";
-import { useCanvasCoordinates } from "../hooks/useCanvasCoordinates";
-import { PDFRenderingProvider, PDFRenderingContextType } from "../contexts/PDFRenderingContext";
-import PageNavigation from "./PageNavigation";
+import { usePDFRenderer } from "../../hooks/usePDFRenderer";
+import { useCanvasCoordinates } from "../../hooks/useCanvasCoordinates";
+import { PDFRenderingProvider, PDFRenderingContextType } from "../../contexts/PDFRenderingContext";
+import PageNavigation from "../navigation/PageNavigation";
 
 interface MouseEventHandlers {
 	onClick?: (x: number, y: number) => void;

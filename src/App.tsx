@@ -1,6 +1,6 @@
-import AppHeader from "./components/ui/AppHeader";
-import LoadingSpinner from "./components/ui/LoadingSpinner";
-import NavigationSteps from "./components/ui/NavigationSteps";
+import AppHeader from "./components/navigation/AppHeader";
+import LoadingSpinner from "./components/common/LoadingSpinner";
+import NavigationSteps from "./components/navigation/NavigationSteps";
 import { PDFProvider } from "./contexts/PDFContext";
 import { usePDFContext } from "./hooks/usePDFContext";
 import { lazy, Suspense } from "react";

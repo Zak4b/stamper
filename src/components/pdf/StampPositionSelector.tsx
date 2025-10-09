@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { StampPosition } from "../lib/pdfStamper";
-import { usePDFRenderingContext } from "../hooks/usePDFRenderingContext";
+import { StampPosition } from "../../lib/pdfStamper";
+import { usePDFRenderingContext } from "../../hooks/usePDFRenderingContext";
 import PDFRenderer from "./PDFRenderer";
 
 interface Props {
