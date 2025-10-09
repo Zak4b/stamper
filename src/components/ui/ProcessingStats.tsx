@@ -1,3 +1,5 @@
+import React from "react";
+
 interface ProcessingStatsProps {
 	total: number;
 	pending: number;
@@ -9,7 +11,7 @@ interface ProcessingStatsProps {
 	isProcessing: boolean;
 }
 
-export default function ProcessingStats({ total, pending, ocr, analyzed, processing, completed, errors, isProcessing }: ProcessingStatsProps) {
+const ProcessingStats: React.FC<ProcessingStatsProps> = ({ total, pending, ocr, analyzed, processing, completed, errors, isProcessing }) => {
 	const finished = completed + errors;
 	const percentage = total > 0 ? (finished / total) * 100 : 0;
 
@@ -105,4 +107,6 @@ export default function ProcessingStats({ total, pending, ocr, analyzed, process
 			)}
 		</div>
 	);
-}
+};
+
+export default ProcessingStats;

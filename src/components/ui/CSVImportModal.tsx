@@ -18,7 +18,7 @@ const DELIMS: { label: string; value: string }[] = [
 	{ label: "Pipe (|)", value: "|" },
 ];
 
-export default function CSVImportModal({ isOpen, onClose, parsed, detectedDelimiter, rawText, initialHasHeader = true, onConfirm }: Props) {
+const CSVImportModal: React.FC<Props> = ({ isOpen, onClose, parsed, detectedDelimiter, rawText, initialHasHeader = true, onConfirm }) => {
 	const [delimiter, setDelimiter] = React.useState<string>(detectedDelimiter ?? ",");
 	const [hasHeader, setHasHeader] = React.useState<boolean>(initialHasHeader);
 	const [numeroCol, setNumeroCol] = React.useState<number>(0);
@@ -165,4 +165,6 @@ export default function CSVImportModal({ isOpen, onClose, parsed, detectedDelimi
 			</div>
 		</div>
 	);
-}
+};
+
+export default CSVImportModal;

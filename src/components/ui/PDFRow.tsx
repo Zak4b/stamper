@@ -1,6 +1,6 @@
+import React, { useState, useEffect } from "react";
 import { FileText, CheckCircle, AlertCircle, CreditCard as Edit2, Loader } from "lucide-react";
 import { PDFFile } from "../../types/PDFFile";
-import { useState, useEffect } from "react";
 
 interface PDFRowProps {
 	pdfFile: PDFFile;
@@ -9,7 +9,7 @@ interface PDFRowProps {
 	onDownload: (pdfFile: PDFFile) => void;
 }
 
-export default function PDFRow({ pdfFile, index, onUpdatePDF, onDownload }: PDFRowProps) {
+const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [editValue, setEditValue] = useState(pdfFile.numeroDossier);
 
@@ -123,4 +123,6 @@ export default function PDFRow({ pdfFile, index, onUpdatePDF, onDownload }: PDFR
 			<div className="flex items-center gap-3">{getStatusDisplay()}</div>
 		</div>
 	);
-}
+};
+
+export default PDFRow;

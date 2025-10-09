@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { StampPosition } from "../lib/pdfStamper";
 import { usePDFRenderingContext } from "../hooks/usePDFRenderingContext";
 import PDFRenderer from "./PDFRenderer";
@@ -10,7 +10,7 @@ interface Props {
 }
 
 // Composant pour afficher la position sélectionnée
-function PositionMarker({ position }: { position: StampPosition | null }) {
+const PositionMarker: React.FC<{ position: StampPosition | null }> = ({ position }) => {
 	const { canvasRef, currentPage } = usePDFRenderingContext();
 
 	if (!position || position.page !== currentPage || !canvasRef.current) return null;
@@ -26,9 +26,9 @@ function PositionMarker({ position }: { position: StampPosition | null }) {
 			}}
 		/>
 	);
-}
+};
 
-export default function StampPositionSelector({ pdfFile, onPositionSelected, currentPosition }: Props) {
+const StampPositionSelector: React.FC<Props> = ({ pdfFile, onPositionSelected, currentPosition }) => {
 	const [position, setPosition] = useState<StampPosition | null>(currentPosition || null);
 	const [currentPage, setCurrentPage] = useState(0);
 
@@ -63,4 +63,6 @@ export default function StampPositionSelector({ pdfFile, onPositionSelected, cur
 			<PositionMarker position={position} />
 		</PDFRenderer>
 	);
-}
+};
+
+export default StampPositionSelector;

@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 import { usePDFRenderer } from "../hooks/usePDFRenderer";
 import { useCanvasCoordinates } from "../hooks/useCanvasCoordinates";
 import { PDFRenderingProvider, PDFRenderingContextType } from "../contexts/PDFRenderingContext";
@@ -24,7 +24,7 @@ interface Props {
 	canvasClassName?: string;
 }
 
-export default function PDFRenderer({
+const PDFRenderer: React.FC<Props> = ({
 	pdfFile,
 	initialPage,
 	children,
@@ -34,7 +34,7 @@ export default function PDFRenderer({
 	description,
 	mouseEventHandlers,
 	canvasClassName = "cursor-crosshair mx-auto",
-}: Props) {
+}) => {
 	const { currentPage, pageCount, canvasRef, goToPage } = usePDFRenderer(pdfFile, {
 		useReorientation: true,
 		initialPage,
@@ -93,4 +93,6 @@ export default function PDFRenderer({
 			</div>
 		</div>
 	);
-}
+};
+
+export default PDFRenderer;

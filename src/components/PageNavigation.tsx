@@ -1,3 +1,5 @@
+import React from "react";
+
 interface Props {
 	currentPage: number;
 	pageCount: number;
@@ -5,7 +7,7 @@ interface Props {
 	disabled?: boolean;
 }
 
-export default function PageNavigation({ currentPage, pageCount, onPageChange, disabled = false }: Props) {
+const PageNavigation: React.FC<Props> = ({ currentPage, pageCount, onPageChange, disabled = false }) => {
 	return (
 		<div className="flex items-center gap-4">
 			<button
@@ -27,4 +29,6 @@ export default function PageNavigation({ currentPage, pageCount, onPageChange, d
 			</button>
 		</div>
 	);
-}
+};
+
+export default PageNavigation;

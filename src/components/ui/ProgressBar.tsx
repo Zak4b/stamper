@@ -1,3 +1,5 @@
+import React from "react";
+
 interface ProgressBarProps {
 	processed: number;
 	total: number;
@@ -6,7 +8,7 @@ interface ProgressBarProps {
 	isProcessing: boolean;
 }
 
-export default function ProgressBar({ processed, total, success, errors, isProcessing }: ProgressBarProps) {
+const ProgressBar: React.FC<ProgressBarProps> = ({ processed, total, success, errors, isProcessing }) => {
 	const percentage = total > 0 ? (processed / total) * 100 : 0;
 	const successPercentage = total > 0 ? (success / total) * 100 : 0;
 	const errorPercentage = total > 0 ? (errors / total) * 100 : 0;
@@ -56,4 +58,6 @@ export default function ProgressBar({ processed, total, success, errors, isProce
 			</div>
 		</div>
 	);
-}
+};
+
+export default ProgressBar;

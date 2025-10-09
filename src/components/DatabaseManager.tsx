@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as deleteDossierDB, importDossiers } from "../lib/database";
 import { autoDetectDelimiter, parseCSV } from "../lib/csvHelper";
 import CSVImportModal from "./ui/CSVImportModal";
@@ -7,7 +7,7 @@ import ConfirmModal from "./ui/ConfirmModal";
 import { clearAllDossiers } from "../lib/database";
 import { useToasts } from "../hooks/useToasts";
 
-export default function DatabaseManager() {
+const DatabaseManager: React.FC = () => {
 	const { push } = useToasts();
 	const [dossiers, setDossiers] = useState<Dossier[]>([]);
 	const [newDossier, setNewDossier] = useState({ numero: "", valeur: "" });
@@ -118,7 +118,9 @@ export default function DatabaseManager() {
 				<div className="flex items-center justify-between mb-6">
 					<div>
 						<h3 className="text-xl font-semibold text-gray-900">Gestion des dossiers</h3>
-						<p className="text-sm text-gray-500 mt-1">{dossiers.length} dossier{dossiers.length !== 1 ? 's' : ''} enregistré{dossiers.length !== 1 ? 's' : ''}</p>
+						<p className="text-sm text-gray-500 mt-1">
+							{dossiers.length} dossier{dossiers.length !== 1 ? "s" : ""} enregistré{dossiers.length !== 1 ? "s" : ""}
+						</p>
 					</div>
 					<div className="flex gap-2">
 						<button
@@ -225,4 +227,6 @@ export default function DatabaseManager() {
 			/>
 		</>
 	);
-}
+};
+
+export default DatabaseManager;

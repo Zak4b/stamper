@@ -1,7 +1,8 @@
+import React from "react";
 import OCRRegionSelector from "../OCRRegionSelector";
 import { usePDFContext } from "../../hooks/usePDFContext";
 
-export default function OCRStep() {
+const OCRStep: React.FC = () => {
 	const { samplePDF, options, setRegionOCR, setPageOCR, setCurrentStep } = usePDFContext();
 
 	if (!samplePDF) {
@@ -29,4 +30,6 @@ export default function OCRStep() {
 			</div>
 		</>
 	);
-}
+};
+
+export default OCRStep;

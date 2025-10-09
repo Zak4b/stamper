@@ -1,8 +1,9 @@
+import React from "react";
 import { FileText } from "lucide-react";
 import DatabaseManager from "../DatabaseManager";
 import { usePDFContext } from "../../hooks/usePDFContext";
 
-export default function DatabaseStep() {
+const DatabaseStep: React.FC = () => {
 	const { setSamplePDF } = usePDFContext();
 
 	return (
@@ -33,4 +34,6 @@ export default function DatabaseStep() {
 			<DatabaseManager />
 		</div>
 	);
-}
+};
+
+export default DatabaseStep;

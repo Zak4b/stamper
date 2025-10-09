@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ToastContext, ToastContextValue, Toast } from "../../lib/toastContext";
 
-export default function ToastProvider({ children }: { children: React.ReactNode }) {
+const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const [toasts, setToasts] = useState<Toast[]>([]);
 	const timersRef = useRef<Map<number, number>>(new Map());
 
@@ -59,4 +59,6 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
 			</div>
 		</ToastContext.Provider>
 	);
-}
+};
+
+export default ToastProvider;

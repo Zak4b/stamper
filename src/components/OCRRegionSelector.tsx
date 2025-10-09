@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Rectangle } from "tesseract.js";
 import { Search } from "lucide-react";
 import { usePDFRenderingContext } from "../hooks/usePDFRenderingContext";
@@ -13,7 +13,7 @@ interface Props {
 }
 
 // Composant pour afficher la région sélectionnée
-function RegionOverlay({ region }: { region: Rectangle | null }) {
+const RegionOverlay: React.FC<{ region: Rectangle | null }> = ({ region }) => {
 	const { canvasRef } = usePDFRenderingContext();
 
 	if (!region || !canvasRef.current) return null;
@@ -31,7 +31,7 @@ function RegionOverlay({ region }: { region: Rectangle | null }) {
 			}}
 		/>
 	);
-}
+};
 
 // Hook personnalisé pour la logique de sélection de région
 function useRegionSelection(initialRegion?: Rectangle | null) {
@@ -72,7 +72,7 @@ function useRegionSelection(initialRegion?: Rectangle | null) {
 	};
 }
 
-export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage }: Props) {
+const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage }) => {
 	const [currentPage, setCurrentPage] = useState(initialPage || 0);
 	const isInitialMount = useRef(true);
 	const { region, setRegion, mouseEventHandlers } = useRegionSelection(currentRegion);
@@ -139,4 +139,6 @@ export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageCha
 			<RegionOverlay region={region} />
 		</PDFRenderer>
 	);
-}
+};
+
+export default OCRRegionSelector;

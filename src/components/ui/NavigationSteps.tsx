@@ -1,3 +1,4 @@
+import React from "react";
 import { Database, Stamp, Search, FileText } from "lucide-react";
 
 type Step = "database" | "ocr-region" | "position" | "stamping";
@@ -9,7 +10,7 @@ interface NavigationStepsProps {
 	onStepChange: (step: Step) => void;
 }
 
-export default function NavigationSteps({ currentStep, samplePDF, stampPosition, onStepChange }: NavigationStepsProps) {
+const NavigationSteps: React.FC<NavigationStepsProps> = ({ currentStep, samplePDF, stampPosition, onStepChange }) => {
 	return (
 		<div className="mb-8 flex gap-3 overflow-x-auto">
 			<button
@@ -68,4 +69,6 @@ export default function NavigationSteps({ currentStep, samplePDF, stampPosition,
 			</button>
 		</div>
 	);
-}
+};
+
+export default NavigationSteps;

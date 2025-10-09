@@ -1,3 +1,5 @@
+import React from "react";
+
 type Props = {
 	isOpen: boolean;
 	title?: string;
@@ -8,7 +10,7 @@ type Props = {
 	cancelLabel?: string;
 };
 
-export default function ConfirmModal({ isOpen, title = "Confirmer", description, onCancel, onConfirm, confirmLabel = "Confirmer", cancelLabel = "Annuler" }: Props) {
+const ConfirmModal: React.FC<Props> = ({ isOpen, title = "Confirmer", description, onCancel, onConfirm, confirmLabel = "Confirmer", cancelLabel = "Annuler" }) => {
 	if (!isOpen) return null;
 
 	return (
@@ -27,4 +29,6 @@ export default function ConfirmModal({ isOpen, title = "Confirmer", description,
 			</div>
 		</div>
 	);
-}
+};
+
+export default ConfirmModal;

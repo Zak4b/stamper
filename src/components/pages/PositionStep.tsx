@@ -1,7 +1,8 @@
+import React from "react";
 import StampPositionSelector from "../StampPositionSelector";
 import { usePDFContext } from "../../hooks/usePDFContext";
 
-export default function PositionStep() {
+const PositionStep: React.FC = () => {
 	const { samplePDF, options, setStampPos, setCurrentStep } = usePDFContext();
 
 	if (!samplePDF) {
@@ -27,4 +28,6 @@ export default function PositionStep() {
 			)}
 		</>
 	);
-}
+};
+
+export default PositionStep;

@@ -1,6 +1,7 @@
+import React from "react";
 import { FileText } from "lucide-react";
 
-export default function AppHeader() {
+const AppHeader: React.FC = () => {
 	return (
 		<header className="mb-8">
 			<div className="flex items-center gap-3 mb-2">
@@ -10,4 +11,6 @@ export default function AppHeader() {
 			<p className="text-gray-600">Tamponnez automatiquement vos PDFs avec des valeurs issues de votre base de données</p>
 		</header>
 	);
-}
+};
+
+export default AppHeader;

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { StampPosition } from "../lib/pdfStamper";
 import { FileText, Download, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { Rectangle } from "tesseract.js";
@@ -16,7 +16,7 @@ interface Props {
 	ocrPageNumber: number;
 }
 
-export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }: Props) {
+const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber }) => {
 	const { loadedPDFs, addPDFs, updatePDF, clearPDFs } = usePDFContext();
 	const [processing, setProcessing] = useState(false);
 	const [autoStamping, setAutoStamping] = useState(true); // File d'attente automatique activée par défaut
@@ -202,4 +202,6 @@ export default function BatchStamper({ stampPosition, ocrRegion, ocrPageNumber }
 			/>
 		</div>
 	);
-}
+};
+
+export default BatchStamper;
