@@ -1,8 +1,7 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { StampPosition } from "../lib/pdfStamper";
-import { usePDFRenderer } from "../hooks/usePDFRenderer";
-import { useCanvasCoordinates } from "../hooks/useCanvasCoordinates";
-import PageNavigation from "./PageNavigation";
+import { usePDFRenderingContext } from "../hooks/usePDFRenderingContext";
+import PDFRenderer from "./PDFRenderer";
 
 interface Props {
 	pdfFile: File;
@@ -10,50 +9,58 @@ interface Props {
 	currentPosition?: StampPosition;
 }
 
+// Composant pour afficher la position sélectionnée
+function PositionMarker({ position }: { position: StampPosition | null }) {
+	const { canvasRef, currentPage } = usePDFRenderingContext();
+
+	if (!position || position.page !== currentPage || !canvasRef.current) return null;
+
+	const canvas = canvasRef.current;
+
+	return (
+		<div
+			className="absolute w-6 h-6 -ml-3 -mt-3 bg-red-500 rounded-full border-2 border-white shadow-lg pointer-events-none"
+			style={{
+				left: `${canvas.offsetLeft + (position.x / canvas.width) * canvas.offsetWidth}px`,
+				top: `${canvas.offsetTop + (position.y / canvas.height) * canvas.offsetHeight}px`,
+			}}
+		/>
+	);
+}
+
 export default function StampPositionSelector({ pdfFile, onPositionSelected, currentPosition }: Props) {
-	const { currentPage, pageCount, canvasRef, goToPage } = usePDFRenderer(pdfFile, { useReorientation: true });
-	const { getCanvasCoordinates } = useCanvasCoordinates();
 	const [position, setPosition] = useState<StampPosition | null>(currentPosition || null);
-	const containerRef = useRef<HTMLDivElement>(null);
+	const [currentPage, setCurrentPage] = useState(0);
 
-	function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
-		const canvas = canvasRef.current;
-		if (!canvas) return;
-
-		const coords = getCanvasCoordinates(e, canvas);
-		const { x, y } = coords;
-
+	function handleCanvasClick(x: number, y: number) {
 		const newPosition: StampPosition = { x, y, page: currentPage };
 		setPosition(newPosition);
 		onPositionSelected(newPosition);
 	}
 
-	return (
-		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-			<h2 className="text-xl font-semibold text-gray-900 mb-4">Sélectionner la position du tampon</h2>
+	function handlePageChange(page: number) {
+		setCurrentPage(page);
+	}
 
-			<div className="mb-4 flex items-center justify-between">
-				<PageNavigation currentPage={currentPage} pageCount={pageCount} onPageChange={goToPage} />
+	const mouseEventHandlers = {
+		onClick: handleCanvasClick,
+	};
 
-				{position && (
-					<div className="text-sm text-gray-600">
-						Position: X={Math.round(position.x)}, Y={Math.round(position.y)}, Page={position.page + 1}
-					</div>
-				)}
-			</div>
-
-			<div ref={containerRef} className="relative border-2 border-dashed border-gray-300 rounded-lg overflow-auto bg-gray-50" style={{ maxHeight: "600px" }}>
-				<canvas ref={canvasRef} onClick={handleCanvasClick} className="cursor-crosshair mx-auto" />
-				{position && position.page === currentPage && canvasRef.current && (
-					<div
-						className="absolute w-6 h-6 -ml-3 -mt-3 bg-red-500 rounded-full border-2 border-white shadow-lg pointer-events-none"
-						style={{
-							left: `${canvasRef.current.offsetLeft + (position.x / canvasRef.current.width) * canvasRef.current.offsetWidth}px`,
-							top: `${canvasRef.current.offsetTop + (position.y / canvasRef.current.height) * canvasRef.current.offsetHeight}px`,
-						}}
-					/>
-				)}
-			</div>
+	const additionalControls = position && (
+		<div className="text-sm text-gray-600">
+			Position: X={Math.round(position.x)}, Y={Math.round(position.y)}, Page={position.page + 1}
 		</div>
+	);
+
+	return (
+		<PDFRenderer
+			pdfFile={pdfFile}
+			onPageChange={handlePageChange}
+			title="Sélectionner la position du tampon"
+			additionalControls={additionalControls}
+			mouseEventHandlers={mouseEventHandlers}
+		>
+			<PositionMarker position={position} />
+		</PDFRenderer>
 	);
 }
