@@ -2,6 +2,19 @@ import { PDFFile } from "../types/PDFFile";
 import { StampPosition, stampPDFWithAnomalyDetection } from "./pdfStamper";
 import { getAllDossiers } from "./database";
 import { Rectangle } from "tesseract.js";
+import { appConfig } from "../config/appConfig";
+
+// Fonction utilitaire pour convertir une couleur hex en RGB
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+	const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	return result
+		? {
+				r: parseInt(result[1], 16) / 255,
+				g: parseInt(result[2], 16) / 255,
+				b: parseInt(result[3], 16) / 255,
+		  }
+		: { r: 0, g: 0, b: 0 };
+}
 
 /**
  * Analyse un fichier PDF avec OCR
@@ -60,8 +73,8 @@ export async function stampFile(fileIndex: number, pdfFile: PDFFile, stampPositi
 		const stampedBytes = await stampPDFWithAnomalyDetection(pdfFile.file, {
 			position: stampPosition,
 			text: dossier.valeur_tampon,
-			fontSize: 14,
-			color: { r: 0, g: 0, b: 0 },
+			fontSize: appConfig.stampStyle.fontSize,
+			color: hexToRgb(appConfig.stampStyle.fontColor),
 		});
 
 		// Marquer comme terminé

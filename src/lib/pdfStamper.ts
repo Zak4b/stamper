@@ -22,8 +22,11 @@ export async function stampPDF(pdfBytes: Uint8Array, config: StampConfig, isReor
 	}
 
 	const page = pages[config.position.page];
+
+	// Obtenir la configuration du style depuis appConfig
+
 	const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-	const fontSize = config.fontSize || 12;
+	const fontSize = config.fontSize;
 	const color = config.color || { r: 0, g: 0, b: 0 };
 
 	// Obtenir les informations sur la rotation de la page

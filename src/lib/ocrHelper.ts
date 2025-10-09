@@ -1,6 +1,7 @@
 import { Rectangle } from "tesseract.js";
 import { createCanvasFromRegion } from "./pdfRenderer";
 import { ocrWorkerManager } from "./ocrWorkerManager";
+import { getEnabledPatterns } from "../config/appConfig";
 
 export interface OCRResult {
 	text: string;
@@ -8,30 +9,11 @@ export interface OCRResult {
 	ids: string[];
 }
 
-// Configuration des patterns d'extraction d'ID
-interface IDPattern {
-	name: string;
-	pattern: RegExp;
-	captureGroup?: number; // Groupe de capture à utiliser (par défaut 1)
-	transform?: (match: string) => string; // Fonction de transformation optionnelle
-}
-
-const patternList: IDPattern[] = [
-	{
-		name: "PREFD66",
-		pattern: /(PREFD66-\d{2}-\d{4})/gi,
-	},
-	{
-		name: "PREFD66_alt",
-		pattern: /PREFD66-(\d{2}-\d{4})/gi,
-		transform: (match) => `PREFD66-${match}`,
-	},
-];
-
 function extractIds(text: string): string[] {
 	const foundIds = new Set<string>();
+	const enabledPatterns = getEnabledPatterns();
 
-	for (const pattern of patternList) {
+	for (const pattern of enabledPatterns) {
 		const matches = text.matchAll(pattern.pattern);
 
 		for (const match of matches) {
