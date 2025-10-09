@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Rectangle } from "tesseract.js";
 import { Search } from "lucide-react";
 import { usePDFRenderer } from "../hooks/usePDFRenderer";
+import { useCanvasCoordinates } from "../hooks/useCanvasCoordinates";
+import PageNavigation from "./PageNavigation";
 
 interface Props {
 	pdfFile: File;
@@ -13,6 +15,7 @@ interface Props {
 
 export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage }: Props) {
 	const { currentPage, pageCount, canvasRef, goToPage } = usePDFRenderer(pdfFile, { useReorientation: true, initialPage });
+	const { getCanvasCoordinates } = useCanvasCoordinates();
 	const [isSelecting, setIsSelecting] = useState(false);
 	const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
 	const [region, setRegion] = useState<Rectangle | null>(currentRegion || null);
@@ -44,16 +47,10 @@ export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageCha
 		const canvas = canvasRef.current;
 		if (!canvas) return;
 
-		const rect = canvas.getBoundingClientRect();
-		const scaleX = canvas.width / rect.width;
-		const scaleY = canvas.height / rect.height;
-
-		// Calculer les coordonnées avec une meilleure précision
-		const x = Math.round((e.clientX - rect.left) * scaleX);
-		const y = Math.round((e.clientY - rect.top) * scaleY);
+		const coords = getCanvasCoordinates(e, canvas);
 
 		setIsSelecting(true);
-		setStartPos({ x, y });
+		setStartPos(coords);
 		setRegion(null);
 	}
 
@@ -63,14 +60,9 @@ export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageCha
 		const canvas = canvasRef.current;
 		if (!canvas) return;
 
-		const rect = canvas.getBoundingClientRect();
-		const scaleX = canvas.width / rect.width;
-		const scaleY = canvas.height / rect.height;
+		const coords = getCanvasCoordinates(e, canvas);
 
-		// Calculer les coordonnées avec une meilleure précision
-		const x = Math.round((e.clientX - rect.left) * scaleX);
-		const y = Math.round((e.clientY - rect.top) * scaleY);
-
+		const { x, y } = coords;
 		const left = Math.min(startPos.x, x);
 		const top = Math.min(startPos.y, y);
 		const width = Math.abs(x - startPos.x);
@@ -103,25 +95,7 @@ export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageCha
 			</p>
 
 			<div className="mb-4 flex items-center justify-between">
-				<div className="flex items-center gap-4">
-					<button
-						onClick={() => goToPage(Math.max(0, currentPage - 1))}
-						disabled={currentPage === 0}
-						className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-					>
-						Page précédente
-					</button>
-					<span className="text-sm text-gray-600">
-						Page {currentPage + 1} / {pageCount}
-					</span>
-					<button
-						onClick={() => goToPage(Math.min(pageCount - 1, currentPage + 1))}
-						disabled={currentPage === pageCount - 1}
-						className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-					>
-						Page suivante
-					</button>
-				</div>
+				<PageNavigation currentPage={currentPage} pageCount={pageCount} onPageChange={goToPage} />
 
 				<button onClick={handleUseFullPage} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium">
 					Utiliser la page complète
@@ -149,12 +123,6 @@ export default function OCRRegionSelector({ pdfFile, onRegionSelected, onPageCha
 					/>
 				)}
 			</div>
-
-			{region && (
-				<div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
-					Zone sélectionnée: {Math.round(region.width)} x {Math.round(region.height)} pixels
-				</div>
-			)}
 		</div>
 	);
 }
