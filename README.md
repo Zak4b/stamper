@@ -13,7 +13,7 @@ Une application web moderne pour tamponner automatiquement des documents PDF ave
 
 ### 📄 Gestion des PDFs
 
-- **Chargement multiple** : Glisser-déposer ou sélection de plusieurs fichiers
+- **Chargement multiple** : Sélection de plusieurs fichiers en file d'attente
 - **Aperçu en temps réel** : Visualisation des PDFs avec sélection de zones
 - **Téléchargement flexible** : Fichiers individuels ou archive ZIP complète
 - **Édition manuelle** : Correction des numéros détectés par OCR

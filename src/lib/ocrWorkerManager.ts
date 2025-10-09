@@ -22,6 +22,7 @@ export class OCRWorkerManager {
 	private isProcessing = false;
 	private destroyTimeout: NodeJS.Timeout | null = null;
 	private readonly DESTROY_DELAY = 5000; // 5 secondes
+	private currentTask: OCRTask | null = null; // Référence à la tâche en cours
 
 	// Singleton instance
 	private static instance: OCRWorkerManager | null = null;
@@ -65,6 +66,7 @@ export class OCRWorkerManager {
 
 		// Créer le worker si nécessaire
 		if (!this.worker) {
+			console.debug("New worker OCR...");
 			await this.createWorker();
 		}
 
@@ -100,6 +102,12 @@ export class OCRWorkerManager {
 		try {
 			console.debug("Création du worker Tesseract...");
 			this.worker = await createWorker("fra", 1, {
+				logger: (m: { status: string; progress: number }) => {
+					// Utiliser la tâche courante pour le callback de progression
+					if (m.status === "recognizing text" && this.currentTask?.onProgress) {
+						this.currentTask.onProgress(m.progress * 100);
+					}
+				},
 				workerPath: "/tesseract/worker.min.js",
 				langPath: "/tesseract",
 				corePath: "/tesseract/tesseract-core.wasm.js",
@@ -113,6 +121,7 @@ export class OCRWorkerManager {
 	// Détruire le worker
 	private async destroyWorker(): Promise<void> {
 		if (this.worker) {
+			console.debug("Destructing OCR worker...");
 			await this.worker.terminate();
 			this.worker = null;
 
@@ -131,16 +140,10 @@ export class OCRWorkerManager {
 		}
 
 		try {
-			if (task.onProgress) {
-				this.worker.setParameters({
-					logger: (m: { status: string; progress: number }) => {
-						if (m.status === "recognizing text" && task.onProgress) {
-							task.onProgress(m.progress * 100);
-						}
-					},
-				});
-			}
+			// Définir la tâche courante pour le callback de progression
+			this.currentTask = task;
 
+			// Lancer la reconnaissance OCR
 			const { data } = await this.worker.recognize(task.imageData);
 
 			task.resolve({
@@ -150,6 +153,9 @@ export class OCRWorkerManager {
 		} catch (error) {
 			console.error(`Erreur lors du traitement de la tâche ${task.id}:`, error);
 			task.reject(error as Error);
+		} finally {
+			// Nettoyer la référence de la tâche courante
+			this.currentTask = null;
 		}
 	}
 
