@@ -22,14 +22,14 @@ export async function analyzeFile(
 			updateFile(fileIndex, { ocrProgress: progress });
 		});
 
-		const detectedNumber = result.detectedNumbers[0] || "NON DÉTECTÉ";
+		const detectedNumber = result.ids[0] || "NON DÉTECTÉ";
 
 		// Marquer comme analysé
 		updateFile(fileIndex, {
 			numeroDossier: detectedNumber,
 			status: "analyzed",
 			ocrConfidence: result.confidence,
-			detectedNumbers: result.detectedNumbers,
+			detectedNumbers: result.ids,
 			ocrProgress: 100,
 		});
 	} catch (error) {

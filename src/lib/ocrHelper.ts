@@ -1,55 +1,71 @@
-import { createWorker, Rectangle } from "tesseract.js";
+import { Rectangle } from "tesseract.js";
 import { createCanvasFromRegion } from "./pdfRenderer";
+import { ocrWorkerManager } from "./ocrWorkerManager";
 
 export interface OCRResult {
 	text: string;
 	confidence: number;
-	detectedNumbers: string[];
+	ids: string[];
 }
 
-function extractNumbers(text: string): string[] {
-	const pattern = /PREFD66-(\d{2}-\d{4})/gi;
-	const numbers = new Set<string>();
+// Configuration des patterns d'extraction d'ID
+interface IDPattern {
+	name: string;
+	pattern: RegExp;
+	captureGroup?: number; // Groupe de capture à utiliser (par défaut 1)
+	transform?: (match: string) => string; // Fonction de transformation optionnelle
+}
 
-	const matches = text.matchAll(pattern);
-	for (const match of matches) {
-		if (match[1]) {
-			numbers.add(`PREFD66-${match[1]}`);
+const patternList: IDPattern[] = [
+	{
+		name: "PREFD66",
+		pattern: /(PREFD66-\d{2}-\d{4})/gi,
+	},
+	{
+		name: "PREFD66_alt",
+		pattern: /PREFD66-(\d{2}-\d{4})/gi,
+		transform: (match) => `PREFD66-${match}`,
+	},
+];
+
+function extractIds(text: string): string[] {
+	const foundIds = new Set<string>();
+
+	for (const pattern of patternList) {
+		const matches = text.matchAll(pattern.pattern);
+
+		for (const match of matches) {
+			const captureIndex = pattern.captureGroup || 1;
+			let extractedId = match[captureIndex];
+
+			if (extractedId) {
+				// Appliquer la transformation si définie
+				if (pattern.transform) {
+					extractedId = pattern.transform(extractedId);
+				}
+				foundIds.add(extractedId);
+			}
 		}
 	}
-
-	return Array.from(numbers);
+	return Array.from(foundIds);
 }
 
 export async function performOCRWithProgress(pdfFile: File, pageNumber: number, region: Rectangle | undefined, onProgress: (progress: number) => void): Promise<OCRResult> {
-	onProgress(10);
-
+	onProgress(0);
 	const imageData = await createCanvasFromRegion(pdfFile, pageNumber, region, 1.5);
 
-	onProgress(60);
+	const result = await ocrWorkerManager.addTask(imageData, onProgress);
 
-	const worker = await createWorker("fra", 1, {
-		logger: (m) => {
-			if (m.status === "recognizing text") {
-				onProgress(60 + m.progress * 40);
-			}
-		},
-		workerPath: "/tesseract/worker.min.js",
-		langPath: "/tesseract",
-		corePath: "/tesseract/tesseract-core.wasm.js",
+	const ids = extractIds(result.text);
+	console.debug("OCR Result:", {
+		text: result.text,
+		confidence: result.confidence,
+		ids: ids,
 	});
 
-	const { data } = await worker.recognize(imageData);
-	await worker.terminate();
-
-	onProgress(100);
-
-	const numbers = extractNumbers(data.text);
-	console.debug("OCR Result:", { text: data.text, confidence: data.confidence, detectedNumbers: numbers });
-
 	return {
-		text: data.text,
-		confidence: data.confidence,
-		detectedNumbers: numbers,
+		text: result.text,
+		confidence: result.confidence,
+		ids: ids,
 	};
 }
