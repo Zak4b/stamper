@@ -1,7 +1,6 @@
 import { createWorker, Worker, ImageLike } from "tesseract.js";
 
 export interface OCRTask {
-	id: string;
 	imageData: ImageLike;
 	onProgress?: (progress: number) => void;
 	resolve: (result: { text: string; confidence: number }) => void;
@@ -36,20 +35,18 @@ export class OCRWorkerManager {
 
 	// Ajouter une tâche OCR à la file
 	public addTask(imageData: ImageLike, onProgress?: (progress: number) => void): Promise<{ text: string; confidence: number }> {
+		// Annuler le timeout de destruction si une nouvelle tâche arrive
+		if (this.destroyTimeout) {
+			clearTimeout(this.destroyTimeout);
+			this.destroyTimeout = null;
+		}
 		return new Promise((resolve, reject) => {
 			const task: OCRTask = {
-				id: `ocr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 				imageData,
 				onProgress,
 				resolve,
 				reject,
 			};
-
-			// Annuler le timeout de destruction si une nouvelle tâche arrive
-			if (this.destroyTimeout) {
-				clearTimeout(this.destroyTimeout);
-				this.destroyTimeout = null;
-			}
 
 			this.taskQueue.push(task);
 			this.processQueue();
@@ -151,7 +148,7 @@ export class OCRWorkerManager {
 				confidence: data.confidence,
 			});
 		} catch (error) {
-			console.error(`Erreur lors du traitement de la tâche ${task.id}:`, error);
+			console.error(`Erreur lors du traitement:`, error);
 			task.reject(error as Error);
 		} finally {
 			// Nettoyer la référence de la tâche courante
@@ -178,19 +175,6 @@ export class OCRWorkerManager {
 			task.reject(new Error("Tâche annulée"));
 		});
 		this.taskQueue = [];
-	}
-
-	// Méthode pour cleanup complet (utile pour les tests)
-	public async cleanup(): Promise<void> {
-		// Annuler le timeout de destruction
-		if (this.destroyTimeout) {
-			clearTimeout(this.destroyTimeout);
-			this.destroyTimeout = null;
-		}
-
-		this.clearQueue();
-		await this.destroyWorker();
-		this.isProcessing = false;
 	}
 }
 
