@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as deleteDossierDB, importDossiers } from "../../lib/database";
-import { autoDetectDelimiter, parseCSV } from "../../lib/csvHelper";
+import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as deleteDossierDB, importDossiers, exportToCSV } from "../../lib/database";
+import { autoDetectDelimiter, processCSVForImport, type CSVImportOptions } from "../../lib/csvHelper";
 import { Plus, Upload, Download, Trash2 } from "lucide-react";
 import { clearAllDossiers } from "../../lib/database";
 import { useToasts } from "../../hooks/useToasts";
@@ -21,7 +21,7 @@ const DatabaseManager: React.FC = () => {
 			const data = await getAllDossiers();
 			setDossiers(data);
 		} catch (error) {
-			push({ type: "error", message: "Erreur lors du chargement de la base: " + (error instanceof Error ? error.message : "Erreur inconnue") });
+			push({ type: "error", message: "Erreur lors du chargement de la base: " + (error instanceof Error ? error.message : "Erreur inconnue"), delai: 6000 });
 		} finally {
 			setLoading(false);
 		}
@@ -43,7 +43,7 @@ const DatabaseManager: React.FC = () => {
 			push({ type: "success", message: "Dossier ajouté" });
 			loadDossiers();
 		} catch (error) {
-			push({ type: "error", message: "Erreur lors de l'ajout: " + (error instanceof Error ? error.message : "Erreur inconnue") });
+			push({ type: "error", message: "Erreur lors de l'ajout: " + (error instanceof Error ? error.message : "Erreur inconnue"), delai: 6000 });
 		}
 	}
 
@@ -56,18 +56,44 @@ const DatabaseManager: React.FC = () => {
 		}
 	}
 
+	const handleClearDatabase = async () => {
+		const confirmed = await confirm({
+			title: "Vider la base de données",
+			description: "Cette action supprimera tous les dossiers enregistrés. Confirmez-vous ?",
+			confirmLabel: "Vider",
+			cancelLabel: "Annuler",
+			confirmVariant: "danger",
+		});
+
+		if (confirmed) {
+			try {
+				await clearAllDossiers();
+				push({ type: "success", message: "Base vidée avec succès" });
+				loadDossiers();
+			} catch (err) {
+				push({ type: "error", message: "Erreur lors de la suppression: " + (err instanceof Error ? err.message : "Erreur inconnue"), delai: 6000 });
+			}
+		}
+	};
+
+	function downloadCSV() {
+		exportToCSV().then((csvString) => {
+			const blob = new Blob([csvString], { type: "text/csv" });
+			downloadBlob(blob, "dossiers.csv");
+		});
+	}
+
 	async function importCSV(file: File) {
 		try {
 			const text = await file.text();
 			const detected = autoDetectDelimiter(text);
 
-			let csvOptions = {
+			let csvOptions: CSVImportOptions = {
 				delimiter: detected,
 				hasHeader: true,
-				numeroCol: 0,
-				valeurCol: 1,
+				idCol: 0,
+				valCol: 1,
 			};
-
 			const confirmed = await confirm({
 				title: "Confirmer l'importation CSV",
 				content: (
@@ -88,68 +114,36 @@ const DatabaseManager: React.FC = () => {
 			});
 
 			if (confirmed) {
+				console.warn("debut import");
 				await handleImportConfirm(text, csvOptions);
+				console.warn("fin import");
 			}
 		} catch (error) {
-			push({ type: "error", message: "Erreur lors de la lecture du fichier: " + (error instanceof Error ? error.message : "Erreur inconnue") });
+			push({ type: "error", message: "Erreur lors de la lecture du fichier: " + (error instanceof Error ? error.message : "Erreur inconnue"), delai: 6000 });
 		}
 	}
 
-	async function handleImportConfirm(text: string, opts: { delimiter: string; hasHeader: boolean; numeroCol: number; valeurCol: number }) {
+	async function handleImportConfirm(text: string, opts: CSVImportOptions) {
 		if (!text) return;
 
-		const finalParsed = parseCSV(text, opts.delimiter, opts.hasHeader, 100000);
+		const result = processCSVForImport(text, opts);
 
-		const records: Array<{ numero_dossier: string; valeur_tampon: string }> = [];
-		for (const row of finalParsed.rows) {
-			const numero = row[opts.numeroCol]?.trim();
-			const valeur = row[opts.valeurCol]?.trim();
-			if (numero && valeur) records.push({ numero_dossier: numero, valeur_tampon: valeur });
-		}
-
-		if (records.length === 0) {
-			push({ type: "warn", message: "Aucun enregistrement valide trouvé" });
+		if (result.records.length === 0) {
+			push({ type: "warn", message: "Aucun enregistrement valide trouvé", delai: 5000 });
 			return;
 		}
 
 		try {
-			const count = await importDossiers(records);
-			push({ type: "success", message: `${count} dossiers importés avec succès` });
+			await importDossiers(result.records);
+			push({
+				type: "success",
+				message: `${result.validRows} dossiers importés avec succès`,
+			});
 			loadDossiers();
 		} catch (error) {
-			push({ type: "error", message: "Erreur d'importation: " + (error instanceof Error ? error.message : "Erreur inconnue") });
+			push({ type: "error", message: "Erreur d'importation: " + (error instanceof Error ? error.message : "Erreur inconnue"), delai: 6000 });
 		}
 	}
-
-	function exportCSV() {
-		const csv = ["numero_dossier,valeur_tampon"];
-		dossiers.forEach((d) => {
-			csv.push(`${d.numero_dossier},${d.valeur_tampon}`);
-		});
-
-		const blob = new Blob([csv.join("\n")], { type: "text/csv" });
-		downloadBlob(blob, "dossiers.csv");
-	}
-
-	const handleClearDatabase = async () => {
-		const confirmed = await confirm({
-			title: "Vider la base de données",
-			description: "Cette action supprimera tous les dossiers enregistrés. Confirmez-vous ?",
-			confirmLabel: "Vider",
-			cancelLabel: "Annuler",
-			confirmVariant: "danger",
-		});
-
-		if (confirmed) {
-			try {
-				await clearAllDossiers();
-				push({ type: "success", message: "Base vidée avec succès" });
-				loadDossiers();
-			} catch (err) {
-				push({ type: "error", message: "Erreur lors de la suppression: " + (err instanceof Error ? err.message : "Erreur inconnue") });
-			}
-		}
-	};
 
 	return (
 		<>
@@ -170,7 +164,7 @@ const DatabaseManager: React.FC = () => {
 							<span className="text-sm font-medium">Importer CSV</span>
 							<input type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && importCSV(e.target.files[0])} />
 						</label>
-						<button onClick={exportCSV} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+						<button onClick={downloadCSV} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
 							<Download className="w-4 h-4" />
 							<span className="text-sm font-medium">Exporter CSV</span>
 						</button>

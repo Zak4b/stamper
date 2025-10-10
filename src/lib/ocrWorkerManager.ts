@@ -1,9 +1,9 @@
-import { createWorker, Worker, ImageLike } from "tesseract.js";
+import Tesseract, { createWorker, Worker, ImageLike } from "tesseract.js";
 
 export interface OCRTask {
 	imageData: ImageLike;
 	onProgress?: (progress: number) => void;
-	resolve: (result: { text: string; confidence: number }) => void;
+	resolve: (result: Tesseract.Page) => void;
 	reject: (error: Error) => void;
 }
 
@@ -34,7 +34,7 @@ export class OCRWorkerManager {
 	}
 
 	// Ajouter une tâche OCR à la file
-	public addTask(imageData: ImageLike, onProgress?: (progress: number) => void): Promise<{ text: string; confidence: number }> {
+	public addTask(imageData: ImageLike, onProgress?: (progress: number) => void): Promise<Tesseract.Page> {
 		// Annuler le timeout de destruction si une nouvelle tâche arrive
 		if (this.destroyTimeout) {
 			clearTimeout(this.destroyTimeout);
@@ -142,11 +142,7 @@ export class OCRWorkerManager {
 
 			// Lancer la reconnaissance OCR
 			const { data } = await this.worker.recognize(task.imageData);
-
-			task.resolve({
-				text: data.text,
-				confidence: data.confidence,
-			});
+			task.resolve(data);
 		} catch (error) {
 			console.error(`Erreur lors du traitement:`, error);
 			task.reject(error as Error);

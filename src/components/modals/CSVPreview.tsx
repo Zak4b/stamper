@@ -1,10 +1,11 @@
 import React, { useMemo } from "react";
+import { type CSVImportOptions } from "../../lib/csvHelper";
 
 interface CSVPreviewProps {
 	rawText: string;
 	detectedDelimiter: string;
 	initialHasHeader?: boolean;
-	onOptionsChange: (options: { delimiter: string; hasHeader: boolean; numeroCol: number; valeurCol: number }) => void;
+	onOptionsChange: (options: CSVImportOptions) => void;
 }
 
 const DELIMS: { label: string; value: string }[] = [
@@ -36,7 +37,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 
 	// Notify parent of option changes
 	React.useEffect(() => {
-		onOptionsChange({ delimiter, hasHeader, numeroCol, valeurCol });
+		onOptionsChange({ delimiter, hasHeader, idCol: numeroCol, valCol: valeurCol });
 	}, [delimiter, hasHeader, numeroCol, valeurCol, onOptionsChange]);
 
 	const maxCols = useMemo(() => {

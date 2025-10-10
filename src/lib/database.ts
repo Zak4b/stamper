@@ -1,4 +1,5 @@
 import initSqlJs from "sql.js";
+import { CSVImportRecord } from "./csvHelper";
 
 export interface Dossier {
 	id: number;
@@ -112,13 +113,13 @@ export async function getDossierByNumero(numeroDossier: string): Promise<Dossier
 	return dossier as unknown as Dossier;
 }
 
-export async function importDossiers(dossiers: Array<{ numero_dossier: string; valeur_tampon: string }>): Promise<number> {
+export async function importDossiers(dossiers: CSVImportRecord[]): Promise<number> {
 	const database = await initDatabase();
 	let count = 0;
 
 	for (const dossier of dossiers) {
 		try {
-			database.run("INSERT OR IGNORE INTO dossiers (numero_dossier, valeur_tampon) VALUES (?, ?)", [dossier.numero_dossier, dossier.valeur_tampon]);
+			database.run("INSERT OR IGNORE INTO dossiers (numero_dossier, valeur_tampon) VALUES (?, ?)", [dossier.id, dossier.value]);
 			count++;
 		} catch (error) {
 			console.error("Error importing dossier:", error);
@@ -129,7 +130,7 @@ export async function importDossiers(dossiers: Array<{ numero_dossier: string; v
 	return count;
 }
 
-export async function exportDossiersToCSV(): Promise<string> {
+export async function exportToCSV(): Promise<string> {
 	const dossiers = await getAllDossiers();
 	const csv = ["numero_dossier,valeur_tampon"];
 

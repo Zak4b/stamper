@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-export type Toast = { id: number; type?: "info" | "success" | "error" | "warn"; message: string };
+export type Toast = { id: number; type?: "info" | "success" | "error" | "warn"; message: string; delai?: number };
 
 export type ToastContextValue = {
 	toasts: Toast[];

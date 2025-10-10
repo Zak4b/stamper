@@ -40,9 +40,8 @@ export async function performOCRWithProgress(pdfFile: File, pageNumber: number, 
 
 	const ids = extractIds(result.text);
 	console.debug("OCR Result:", {
-		text: result.text,
-		confidence: result.confidence,
 		ids: ids,
+		result,
 	});
 
 	return {

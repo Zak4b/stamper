@@ -52,3 +52,52 @@ export function parseCSV(text: string, delimiter = ",", hasHeader = true, maxPre
 
 	return { header, rows };
 }
+
+export type CSVImportOptions = {
+	delimiter: string;
+	hasHeader: boolean;
+	idCol: number;
+	valCol: number;
+};
+
+export type CSVImportRecord = {
+	id: string;
+	value: string;
+};
+
+export type CSVImportResult = {
+	records: CSVImportRecord[];
+	totalRows: number;
+	validRows: number;
+	invalidRows: number;
+};
+
+/**
+ * Traite un fichier CSV complet et extrait les enregistrements selon les options spécifiées
+ */
+export function processCSVForImport(text: string, options: CSVImportOptions): CSVImportResult {
+	const finalParsed = parseCSV(text, options.delimiter, options.hasHeader, 100000);
+
+	const records: CSVImportRecord[] = [];
+	let validRows = 0;
+	let invalidRows = 0;
+
+	for (const row of finalParsed.rows) {
+		const numero = row[options.idCol]?.trim();
+		const valeur = row[options.valCol]?.trim();
+
+		if (numero && valeur) {
+			records.push({ id: numero, value: valeur });
+			validRows++;
+		} else {
+			invalidRows++;
+		}
+	}
+
+	return {
+		records,
+		totalRows: finalParsed.rows.length,
+		validRows,
+		invalidRows,
+	};
+}

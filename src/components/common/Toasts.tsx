@@ -15,11 +15,11 @@ const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 	}, []);
 
 	const push = useCallback(
-		(t: Omit<Toast, "id"> & { durationMs?: number }) => {
+		(t: Omit<Toast, "id">) => {
 			const id = Date.now() + Math.floor(Math.random() * 1000);
-			const toast: Toast = { ...t, id } as Toast;
+			const toast: Toast = { ...t, id };
 			setToasts((prev) => [toast, ...prev]);
-			const duration = t.durationMs ?? 4000;
+			const duration = t.delai ?? 4000;
 			const timer = window.setTimeout(() => remove(id), duration);
 			timersRef.current.set(id, timer);
 		},
