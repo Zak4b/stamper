@@ -2,17 +2,20 @@ import React from "react";
 import StatItem from "./StatItem";
 import MultiProgressBar from "./MultiProgressBar";
 import { AlertCircle, CheckCircle } from "lucide-react";
+import { PDFFile } from "../../types/PDFFile";
 
 interface ProcessingStatsProps {
-	pending: number;
-	ocr: number;
-	analyzed: number;
-	processing: number;
-	completed: number;
-	errors: number;
+	PDFs: PDFFile[];
 }
 
-const ProcessingStats: React.FC<ProcessingStatsProps> = ({ pending, ocr, analyzed, processing, completed, errors }) => {
+const ProcessingStats: React.FC<ProcessingStatsProps> = ({ PDFs }) => {
+	const pending = PDFs.filter((f) => f.status === "pending").length;
+	const ocr = PDFs.filter((f) => f.status === "ocr").length;
+	const analyzed = PDFs.filter((f) => f.status === "analyzed").length;
+	const processing = PDFs.filter((f) => f.status === "processing").length;
+	const completed = PDFs.filter((f) => f.status === "completed").length;
+	const errors = PDFs.filter((f) => f.status === "error").length;
+
 	const total: number = pending + ocr + analyzed + processing + completed + errors;
 	const finished: boolean = completed + errors == total;
 	const percentage: number = total > 0 ? (completed / total) * 100 : 0;

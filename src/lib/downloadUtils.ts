@@ -9,7 +9,7 @@ export async function downloadAll(pdfFiles: PDFFile[]): Promise<void> {
 
 	pdfFiles.forEach((pdfFile) => {
 		if (pdfFile.status === "completed" && pdfFile.stampedData) {
-			zip.file(`${pdfFile.numeroDossier}_tamponné.pdf`, new Uint8Array(pdfFile.stampedData));
+			zip.file(`${pdfFile.docId}_tamponné.pdf`, new Uint8Array(pdfFile.stampedData));
 		}
 	});
 
@@ -34,7 +34,7 @@ export function downloadSingle(pdfFile: PDFFile): void {
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement("a");
 	a.href = url;
-	a.download = `${pdfFile.numeroDossier}_tamponné.pdf`;
+	a.download = `${pdfFile.docId}_tamponné.pdf`;
 	a.click();
 
 	// Nettoyer l'URL après téléchargement

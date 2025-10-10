@@ -1,10 +1,10 @@
 export interface PDFFile {
 	file: File;
-	numeroDossier: string | null;
+	docId?: string;
 	status: "pending" | "ocr" | "analyzed" | "processing" | "completed" | "error";
 	error?: string;
 	stampedData?: Uint8Array;
 	ocrConfidence?: number;
-	detectedNumbers?: string[];
+	detectedIds?: string[];
 	ocrProgress?: number;
 }

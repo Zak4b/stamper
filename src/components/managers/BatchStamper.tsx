@@ -26,7 +26,7 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 			.filter((f) => f.type === "application/pdf")
 			.map((file) => ({
 				file,
-				numeroDossier: "",
+				docId: null,
 				status: "pending" as const,
 				ocrProgress: 0,
 			}));
@@ -60,18 +60,11 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 
 	// Surveiller les fichiers analyzed et les tamponner automatiquement
 	useEffect(() => {
-		const analyzedFiles = loadedPDFs.map((file, index) => ({ file, index })).filter(({ file }) => file.status === "analyzed");
+		const analyzedFiles = loadedPDFs.map((file, index) => ({ file, index })).filter(({ file }) => file.status === "analyzed" && file.error === undefined);
 		analyzedFiles.forEach(({ file, index }) => processPDF(file, index));
 	}, [loadedPDFs, processPDF]);
 
 	const handleDownloadAll = async () => await downloadAll(loadedPDFs);
-
-	const completedCount = loadedPDFs.filter((f) => f.status === "completed").length;
-	const errorCount = loadedPDFs.filter((f) => f.status === "error").length;
-	const ocrCount = loadedPDFs.filter((f) => f.status === "ocr").length;
-	const analyzedCount = loadedPDFs.filter((f) => f.status === "analyzed").length;
-	const processingCount = loadedPDFs.filter((f) => f.status === "processing").length;
-	const pendingCount = loadedPDFs.filter((f) => f.status === "pending").length;
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -94,7 +87,7 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 								<Trash2 className="w-4 h-4" />
 								Effacer tout
 							</button>
-							{completedCount > 0 && (
+							{loadedPDFs.length > 0 && (
 								<button onClick={handleDownloadAll} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
 									<Download className="w-4 h-4" />
 									Télécharger tout (ZIP)
@@ -107,7 +100,7 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 
 			{loadedPDFs.length > 0 ? (
 				<>
-					<ProcessingStats pending={pendingCount} ocr={ocrCount} analyzed={analyzedCount} processing={processingCount} completed={completedCount} errors={errorCount} />
+					<ProcessingStats PDFs={loadedPDFs} />
 					<div className="space-y-2 max-h-96 overflow-y-auto">
 						{loadedPDFs.map((pdfFile, index) => (
 							<PDFRow key={index} pdfFile={pdfFile} index={index} onUpdatePDF={updatePDF} onDownload={handleDownloadSingle} />

@@ -35,19 +35,20 @@ export async function analyzeFile(
 			updateFile(fileIndex, { ocrProgress: progress });
 		});
 
-		const detectedNumber = result.ids[0] || null;
-
+		const detectedNumber = result.ids[0] || undefined;
+		if (!detectedNumber) {
+			throw new Error("Aucun numéro détecté");
+		}
 		// Marquer comme analysé
 		updateFile(fileIndex, {
-			numeroDossier: detectedNumber,
+			docId: detectedNumber,
 			status: "analyzed",
 			ocrConfidence: result.confidence,
-			detectedNumbers: result.ids,
+			detectedIds: result.ids,
 			ocrProgress: 100,
 		});
 	} catch (error) {
 		updateFile(fileIndex, {
-			numeroDossier: "ERREUR OCR",
 			status: "error",
 			error: error instanceof Error ? error.message : "Erreur OCR",
 		});
@@ -64,7 +65,7 @@ export async function stampFile(fileIndex: number, pdfFile: PDFFile, stampPositi
 		updateFile(fileIndex, { status: "processing" });
 
 		const dossiers = await getAllDossiers();
-		const dossier = dossiers.find((d) => d.numero_dossier === pdfFile.numeroDossier);
+		const dossier = dossiers.find((d) => d.numero_dossier === pdfFile.docId);
 
 		if (!dossier) {
 			throw new Error("Numéro de dossier non trouvé dans la base de données");
@@ -98,7 +99,7 @@ export async function stampAllAnalyzedFiles(pdfFiles: PDFFile[], stampPosition: 
 		const pdfFile = pdfFiles[i];
 
 		// Tamponner seulement les fichiers analysés
-		if (pdfFile.status === "analyzed" && pdfFile.numeroDossier !== null) {
+		if (pdfFile.status === "analyzed" && pdfFile.docId !== null) {
 			await stampFile(i, pdfFile, stampPosition, updateFile);
 		}
 	}

@@ -14,14 +14,16 @@ const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload
 	const [editValue, setEditValue] = useState<string>("");
 
 	const handleStartEditing = () => {
-		setEditValue(pdfFile.numeroDossier || "");
+		setEditValue(pdfFile.docId || "");
 		setIsEditing(true);
 	};
 
 	const handleSaveEdit = () => {
 		setIsEditing(false);
+		const newValue = editValue.trim();
+		if (newValue.length == 0 || newValue === pdfFile.docId) return;
 		onUpdatePDF(index, {
-			numeroDossier: editValue,
+			docId: newValue,
 			error: undefined,
 			status: "analyzed", // Remettre le statut à "analyzed" pour déclencher le traitement automatique
 		});
@@ -91,8 +93,8 @@ const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload
 					) : (
 						<div className="flex items-center gap-2">
 							<p className="text-xs text-gray-500">
-								Dossier: {pdfFile.numeroDossier || "En attente..."}
-								{pdfFile.ocrConfidence && <span className="ml-2 text-gray-400">({Math.round(pdfFile.ocrConfidence)}% confiance)</span>}
+								Dossier: {pdfFile.docId || "En attente..."}
+								{pdfFile.ocrConfidence !== undefined && <span className="ml-2 text-gray-400">({Math.round(pdfFile.ocrConfidence)}% confiance)</span>}
 							</p>
 							{pdfFile.status !== "ocr" && (
 								<button onClick={handleStartEditing} className="text-gray-400 hover:text-blue-600" title="Modifier le numéro">
@@ -100,10 +102,6 @@ const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload
 								</button>
 							)}
 						</div>
-					)}
-
-					{pdfFile.detectedNumbers && pdfFile.detectedNumbers.length > 1 && (
-						<p className="text-xs text-gray-400 mt-1">Autres détectés: {pdfFile.detectedNumbers.slice(1, 3).join(", ")}</p>
 					)}
 
 					{pdfFile.error && <p className="text-xs text-red-600 mt-1">{pdfFile.error}</p>}
