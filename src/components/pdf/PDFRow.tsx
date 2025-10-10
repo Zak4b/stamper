@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FileText, CheckCircle, AlertCircle, CreditCard as Edit2, Loader } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, CreditCard as Edit2, Loader, RotateCcw, Eye } from "lucide-react";
 import { PDFFile } from "../../types/PDFFile";
 
 interface PDFRowProps {
@@ -7,9 +7,11 @@ interface PDFRowProps {
 	index: number;
 	onUpdatePDF: (index: number, updates: Partial<PDFFile>) => void;
 	onDownload: (pdfFile: PDFFile) => void;
+	onRetry?: (pdfFile: PDFFile, index: number) => void;
+	onViewPDF?: (pdfFile: PDFFile, index: number) => void;
 }
 
-const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload }) => {
+const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload, onRetry, onViewPDF }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [editValue, setEditValue] = useState<string>("");
 
@@ -30,6 +32,18 @@ const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload
 	};
 
 	const handleCancelEdit = () => setIsEditing(false);
+
+	const handleManualEntry = () => {
+		if (onViewPDF) {
+			onViewPDF(pdfFile, index);
+		}
+	};
+
+	const handleRetry = () => {
+		if (onRetry) {
+			onRetry(pdfFile, index);
+		}
+	};
 
 	const getStatusDisplay = () => {
 		switch (pdfFile.status) {
@@ -61,7 +75,23 @@ const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload
 					</>
 				);
 			case "error":
-				return <AlertCircle className="w-5 h-5 text-red-600" />;
+				return (
+					<>
+						<AlertCircle className="w-5 h-5 text-red-600" />
+						{onViewPDF && (
+							<button onClick={handleManualEntry} className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+								<Eye className="w-4 h-4" />
+								Visualiser
+							</button>
+						)}
+						{onRetry && (
+							<button onClick={handleRetry} className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors">
+								<RotateCcw className="w-4 h-4" />
+								Réessayer
+							</button>
+						)}
+					</>
+				);
 			default:
 				return null;
 		}

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { StampPosition } from "../../lib/pdfStamper";
-import { FileText, Download, Trash2 } from "lucide-react";
+import { FileText, Download, Trash2, ClipboardCheck } from "lucide-react";
 import { Rectangle } from "tesseract.js";
 import ProcessingStats from "../progress/ProcessingStats";
 import PDFRow from "../pdf/PDFRow";
@@ -17,7 +17,7 @@ interface Props {
 }
 
 const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber }) => {
-	const { loadedPDFs, addPDFs, updatePDF, clearPDFs } = usePDFContext();
+	const { loadedPDFs, addPDFs, updatePDF, clearPDFs, setCurrentStep } = usePDFContext();
 	const { confirm, modalComponent } = useConfirmModal();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,6 +39,16 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 			await analyzeFile(fileIndex, file, ocrPageNumber, ocrRegion, updatePDF);
 		}
 	}
+
+	const handleRetry = async (file: PDFFile, fileIndex: number) => {
+		updatePDF(fileIndex, { status: "pending", error: undefined });
+		await analyzeFile(fileIndex, file.file, ocrPageNumber, ocrRegion, updatePDF);
+
+		const updatedFile = loadedPDFs[fileIndex];
+		if (updatedFile.status === "analyzed") {
+			await stampFile(fileIndex, updatedFile, stampPosition, updatePDF);
+		}
+	};
 
 	const handleClearPDFs = async () => {
 		const confirmed = await confirm({
@@ -76,11 +86,22 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 		await downloadAll(loadedPDFs);
 	};
 
+	const handleReviewErrors = () => {
+		setCurrentStep("review");
+	};
+
+	const errorCount = loadedPDFs.filter((pdf) => pdf.status === "error").length;
+
 	return (
 		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
 					<h2 className="text-xl font-semibold text-gray-900">Traitement par lot</h2>
+					{errorCount > 0 && (
+						<p className="text-sm text-red-600 mt-1">
+							{errorCount} fichier{errorCount > 1 ? "s" : ""} en erreur
+						</p>
+					)}
 				</div>
 				<div className="flex gap-3">
 					<label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -90,6 +111,12 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 					</label>
 					{loadedPDFs.length > 0 && (
 						<>
+							{errorCount > 0 && (
+								<button onClick={handleReviewErrors} className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+									<ClipboardCheck className="w-4 h-4" />
+									Revoir les erreurs
+								</button>
+							)}
 							<button onClick={handleClearPDFs} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
 								<Trash2 className="w-4 h-4" />
 								Effacer tout
@@ -110,7 +137,7 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 					<ProcessingStats PDFs={loadedPDFs} />
 					<div className="space-y-2 max-h-96 overflow-y-auto">
 						{loadedPDFs.map((pdfFile, index) => (
-							<PDFRow key={index} pdfFile={pdfFile} index={index} onUpdatePDF={updatePDF} onDownload={handleDownloadSingle} />
+							<PDFRow key={index} pdfFile={pdfFile} index={index} onUpdatePDF={updatePDF} onDownload={handleDownloadSingle} onRetry={handleRetry} />
 						))}
 					</div>
 				</>
