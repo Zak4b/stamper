@@ -3,12 +3,13 @@ import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as d
 import { autoDetectDelimiter, parseCSV } from "../../lib/csvHelper";
 import CSVImportModal from "../modals/CSVImportModal";
 import { Plus, Trash2, Upload, Download } from "lucide-react";
-import ConfirmModal from "../modals/ConfirmModal";
 import { clearAllDossiers } from "../../lib/database";
 import { useToasts } from "../../hooks/useToasts";
+import { useConfirmModal } from "../../hooks/useConfirmModal";
 
 const DatabaseManager: React.FC = () => {
 	const { push } = useToasts();
+	const { confirm, modalComponent } = useConfirmModal();
 	const [dossiers, setDossiers] = useState<Dossier[]>([]);
 	const [newDossier, setNewDossier] = useState({ numero: "", valeur: "" });
 	const [loading, setLoading] = useState(false);
@@ -16,7 +17,6 @@ const DatabaseManager: React.FC = () => {
 	const [importPreview, setImportPreview] = useState<{ header?: string[]; rows: string[][] } | undefined>(undefined);
 	const [importDetectedDelim, setImportDetectedDelim] = useState<string | undefined>(undefined);
 	const [importFileText, setImportFileText] = useState<string | undefined>(undefined);
-	const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
 	const loadDossiers = useCallback(async () => {
 		setLoading(true);
@@ -112,6 +112,26 @@ const DatabaseManager: React.FC = () => {
 		a.click();
 	}
 
+	const handleClearDatabase = async () => {
+		const confirmed = await confirm({
+			title: "Vider la base de données",
+			description: "Cette action supprimera tous les dossiers enregistrés. Confirmez-vous ?",
+			confirmLabel: "Vider",
+			cancelLabel: "Annuler",
+			confirmVariant: "danger",
+		});
+
+		if (confirmed) {
+			try {
+				await clearAllDossiers();
+				push({ type: "success", message: "Base vidée avec succès" });
+				loadDossiers();
+			} catch (err) {
+				push({ type: "error", message: "Erreur lors du vidage: " + (err instanceof Error ? err.message : "Erreur inconnue") });
+			}
+		}
+	};
+
 	return (
 		<>
 			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -123,10 +143,7 @@ const DatabaseManager: React.FC = () => {
 						</p>
 					</div>
 					<div className="flex gap-2">
-						<button
-							onClick={() => setConfirmClearOpen(true)}
-							className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-						>
+						<button onClick={handleClearDatabase} className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
 							<span className="text-sm font-medium">Vider la base</span>
 						</button>
 						<label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
@@ -208,23 +225,7 @@ const DatabaseManager: React.FC = () => {
 				initialHasHeader={true}
 				onConfirm={handleImportConfirm}
 			/>
-			<ConfirmModal
-				isOpen={confirmClearOpen}
-				title="Vider la base de données"
-				description="Cette action supprimera tous les dossiers enregistrés. Confirmez-vous ?"
-				onCancel={() => setConfirmClearOpen(false)}
-				onConfirm={async () => {
-					setConfirmClearOpen(false);
-					try {
-						await clearAllDossiers();
-						push({ type: "success", message: "Base vidée avec succès" });
-						loadDossiers();
-					} catch (err) {
-						push({ type: "error", message: "Erreur lors du vidage: " + (err instanceof Error ? err.message : "Erreur inconnue") });
-					}
-				}}
-				confirmLabel="Vider"
-			/>
+			{modalComponent}
 		</>
 	);
 };

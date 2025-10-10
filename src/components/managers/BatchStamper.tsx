@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import { StampPosition } from "../../lib/pdfStamper";
 import { FileText, Download, Trash2 } from "lucide-react";
 import { Rectangle } from "tesseract.js";
 import ProcessingStats from "../progress/ProcessingStats";
 import PDFRow from "../pdf/PDFRow";
-import ConfirmModal from "../modals/ConfirmModal";
 import { usePDFContext } from "../../hooks/usePDFContext";
+import { useConfirmModal } from "../../hooks/useConfirmModal";
 import { type PDFFile } from "../../types/PDFFile";
 import { downloadAll, downloadSingle } from "../../lib/downloadUtils";
 import { analyzeFile, stampFile } from "../../lib/pdfProcessingUtils";
@@ -18,7 +18,7 @@ interface Props {
 
 const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber }) => {
 	const { loadedPDFs, addPDFs, updatePDF, clearPDFs } = usePDFContext();
-	const [showClearConfirm, setShowClearConfirm] = useState(false);
+	const { confirm, modalComponent } = useConfirmModal();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	async function handleFilesSelected(files: FileList) {
@@ -26,7 +26,6 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 			.filter((f) => f.type === "application/pdf")
 			.map((file) => ({
 				file,
-				docId: null,
 				status: "pending" as const,
 				ocrProgress: 0,
 			}));
@@ -41,10 +40,19 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 		}
 	}
 
-	function handleClearPDFs() {
-		clearPDFs();
-		setShowClearConfirm(false);
-	}
+	const handleClearPDFs = async () => {
+		const confirmed = await confirm({
+			title: "Effacer tous les PDFs",
+			description: `Êtes-vous sûr de vouloir supprimer tous les ${loadedPDFs.length} PDF(s) de la liste ? Cette action est irréversible.`,
+			confirmLabel: "Effacer tout",
+			cancelLabel: "Annuler",
+			confirmVariant: "danger",
+		});
+
+		if (confirmed) {
+			clearPDFs();
+		}
+	};
 
 	function handleDownloadSingle(pdfFile: PDFFile) {
 		downloadSingle(pdfFile);
@@ -64,7 +72,9 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 		analyzedFiles.forEach(({ file, index }) => processPDF(file, index));
 	}, [loadedPDFs, processPDF]);
 
-	const handleDownloadAll = async () => await downloadAll(loadedPDFs);
+	const handleDownloadAll = async () => {
+		await downloadAll(loadedPDFs);
+	};
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -80,10 +90,7 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 					</label>
 					{loadedPDFs.length > 0 && (
 						<>
-							<button
-								onClick={() => setShowClearConfirm(true)}
-								className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-							>
+							<button onClick={handleClearPDFs} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
 								<Trash2 className="w-4 h-4" />
 								Effacer tout
 							</button>
@@ -114,15 +121,7 @@ const BatchStamper: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber
 				</div>
 			)}
 
-			<ConfirmModal
-				isOpen={showClearConfirm}
-				title="Effacer tous les PDFs"
-				description={`Êtes-vous sûr de vouloir supprimer tous les ${loadedPDFs.length} PDF(s) de la liste ? Cette action est irréversible.`}
-				confirmLabel="Effacer tout"
-				cancelLabel="Annuler"
-				onConfirm={handleClearPDFs}
-				onCancel={() => setShowClearConfirm(false)}
-			/>
+			{modalComponent}
 		</div>
 	);
 };
