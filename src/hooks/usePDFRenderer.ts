@@ -1,14 +1,25 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { renderPDFPage, PDFRenderOptions } from "../lib/pdfRenderer";
 
-export function usePDFRenderer(pdfFile: File, options: PDFRenderOptions = {}) {
-	const [currentPage, setCurrentPage] = useState(0);
+interface UsePDFRendererOptions extends PDFRenderOptions {
+	initialPage?: number;
+}
+
+export function usePDFRenderer(pdfFile: File, options: UsePDFRendererOptions = {}) {
+	const [currentPage, setCurrentPage] = useState(options.initialPage || 0);
 	const [pageCount, setPageCount] = useState(1);
 	const [isLoading, setIsLoading] = useState(false);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 
 	const stableOptions = useRef(options);
 	stableOptions.current = options;
+
+	// Synchroniser avec la page initiale seulement quand initialPage change
+	useEffect(() => {
+		if (options.initialPage !== undefined) {
+			setCurrentPage(options.initialPage);
+		}
+	}, [options.initialPage]);
 
 	const loadPDF = useCallback(async () => {
 		if (!canvasRef.current) return;
