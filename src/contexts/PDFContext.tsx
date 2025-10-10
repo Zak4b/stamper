@@ -3,7 +3,7 @@ import { StampPosition } from "../lib/pdfStamper";
 import { Rectangle } from "tesseract.js";
 import { type PDFFile } from "../types/PDFFile";
 
-type Step = "database" | "ocr-region" | "position" | "stamping";
+type Step = "database" | "ocr-region" | "position" | "stamping" | "review";
 
 interface Options {
 	ocrRegion?: Rectangle;

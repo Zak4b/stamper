@@ -9,6 +9,7 @@ const DatabaseStep = lazy(() => import("./pages/DatabaseStep"));
 const OCRStep = lazy(() => import("./pages/OCRStep"));
 const PositionStep = lazy(() => import("./pages/PositionStep"));
 const StampingStep = lazy(() => import("./pages/StampingStep"));
+const ReviewStep = lazy(() => import("./pages/ReviewStep"));
 
 function AppContent() {
 	const { currentStep, samplePDF, options, setCurrentStep } = usePDFContext();
@@ -28,6 +29,8 @@ function AppContent() {
 						{currentStep === "position" && <PositionStep />}
 
 						{currentStep === "stamping" && <StampingStep />}
+
+						{currentStep === "review" && <ReviewStep stampPosition={options.stampPosition!} ocrRegion={options.ocrRegion} ocrPageNumber={options.ocrPageNumber} />}
 					</div>
 				</Suspense>
 			</div>

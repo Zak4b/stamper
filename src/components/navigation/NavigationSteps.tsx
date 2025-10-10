@@ -1,8 +1,8 @@
 import React from "react";
-import { Database, Stamp, Search, FileText } from "lucide-react";
+import { Database, Stamp, Search, FileText, ClipboardCheck } from "lucide-react";
 import NavigationButton from "./NavigationButton";
 
-type Step = "database" | "ocr-region" | "position" | "stamping";
+type Step = "database" | "ocr-region" | "position" | "stamping" | "review";
 
 interface NavigationStepsProps {
 	currentStep: Step;
@@ -33,6 +33,15 @@ const NavigationSteps: React.FC<NavigationStepsProps> = ({ currentStep, samplePD
 				icon={<FileText className="w-5 h-5" />}
 			>
 				4. Traitement
+			</NavigationButton>
+
+			<NavigationButton
+				onClick={() => stampPosition && onStepChange("review")}
+				disabled={!stampPosition}
+				active={currentStep === "review"}
+				icon={<ClipboardCheck className="w-5 h-5" />}
+			>
+				5. Revue
 			</NavigationButton>
 		</div>
 	);
