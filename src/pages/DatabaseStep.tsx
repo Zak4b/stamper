@@ -1,7 +1,7 @@
 import React from "react";
 import { FileText } from "lucide-react";
-import DatabaseManager from "../managers/DatabaseManager";
-import { usePDFContext } from "../../hooks/usePDFContext";
+import DatabaseManager from "../components/managers/DatabaseManager";
+import { usePDFContext } from "../hooks/usePDFContext";
 
 const DatabaseStep: React.FC = () => {
 	const { setSamplePDF } = usePDFContext();

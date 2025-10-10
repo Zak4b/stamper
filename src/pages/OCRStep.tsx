@@ -1,7 +1,7 @@
 import React from "react";
-import OCRRegionSelector from "../pdf/OCRRegionSelector";
-import { usePDFContext } from "../../hooks/usePDFContext";
-import FloatingActionButton from "../common/FloatingActionButton";
+import OCRRegionSelector from "../components/pdf/OCRRegionSelector";
+import { usePDFContext } from "../hooks/usePDFContext";
+import FloatingActionButton from "../components/common/FloatingActionButton";
 import { ArrowRight } from "lucide-react";
 
 const OCRStep: React.FC = () => {

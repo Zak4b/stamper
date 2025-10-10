@@ -5,10 +5,10 @@ import { PDFProvider } from "./contexts/PDFContext";
 import { usePDFContext } from "./hooks/usePDFContext";
 import { lazy, Suspense } from "react";
 
-const DatabaseStep = lazy(() => import("./components/pages/DatabaseStep"));
-const OCRStep = lazy(() => import("./components/pages/OCRStep"));
-const PositionStep = lazy(() => import("./components/pages/PositionStep"));
-const StampingStep = lazy(() => import("./components/pages/StampingStep"));
+const DatabaseStep = lazy(() => import("./pages/DatabaseStep"));
+const OCRStep = lazy(() => import("./pages/OCRStep"));
+const PositionStep = lazy(() => import("./pages/PositionStep"));
+const StampingStep = lazy(() => import("./pages/StampingStep"));
 
 function AppContent() {
 	const { currentStep, samplePDF, options, setCurrentStep } = usePDFContext();

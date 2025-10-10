@@ -1,8 +1,8 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
-import StampPositionSelector from "../pdf/StampPositionSelector";
-import FloatingActionButton from "../common/FloatingActionButton";
-import { usePDFContext } from "../../hooks/usePDFContext";
+import StampPositionSelector from "../components/pdf/StampPositionSelector";
+import FloatingActionButton from "../components/common/FloatingActionButton";
+import { usePDFContext } from "../hooks/usePDFContext";
 
 const PositionStep: React.FC = () => {
 	const { samplePDF, options, setStampPos, setCurrentStep } = usePDFContext();

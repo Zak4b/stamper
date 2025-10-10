@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as deleteDossierDB, importDossiers } from "../../lib/database";
 import { autoDetectDelimiter, parseCSV } from "../../lib/csvHelper";
-import CSVImportModal from "../modals/CSVImportModal";
-import { Plus, Trash2, Upload, Download } from "lucide-react";
+import { Plus, Upload, Download, Trash2 } from "lucide-react";
 import { clearAllDossiers } from "../../lib/database";
 import { useToasts } from "../../hooks/useToasts";
 import { useConfirmModal } from "../../hooks/useConfirmModal";
+import { CSVPreview } from "../modals/CSVPreview";
 import { downloadBlob } from "../../lib/downloadUtils";
 
 const DatabaseManager: React.FC = () => {
@@ -14,10 +14,6 @@ const DatabaseManager: React.FC = () => {
 	const [dossiers, setDossiers] = useState<Dossier[]>([]);
 	const [newDossier, setNewDossier] = useState({ numero: "", valeur: "" });
 	const [loading, setLoading] = useState(false);
-	const [importModalOpen, setImportModalOpen] = useState(false);
-	const [importPreview, setImportPreview] = useState<{ header?: string[]; rows: string[][] } | undefined>(undefined);
-	const [importDetectedDelim, setImportDetectedDelim] = useState<string | undefined>(undefined);
-	const [importFileText, setImportFileText] = useState<string | undefined>(undefined);
 
 	const loadDossiers = useCallback(async () => {
 		setLoading(true);
@@ -61,22 +57,48 @@ const DatabaseManager: React.FC = () => {
 	}
 
 	async function importCSV(file: File) {
-		const text = await file.text();
+		try {
+			const text = await file.text();
+			const detected = autoDetectDelimiter(text);
 
-		const detected = autoDetectDelimiter(text);
-		const parsed = parseCSV(text, detected, true, 200);
+			let csvOptions = {
+				delimiter: detected,
+				hasHeader: true,
+				numeroCol: 0,
+				valeurCol: 1,
+			};
 
-		setImportDetectedDelim(detected);
-		setImportPreview(parsed);
-		setImportFileText(text);
-		setImportModalOpen(true);
+			const confirmed = await confirm({
+				title: "Confirmer l'importation CSV",
+				content: (
+					<CSVPreview
+						rawText={text}
+						detectedDelimiter={detected}
+						initialHasHeader={true}
+						onOptionsChange={(options) => {
+							csvOptions = options;
+						}}
+					/>
+				),
+				confirmLabel: "Importer",
+				cancelLabel: "Annuler",
+				confirmVariant: "primary",
+				size: "xl",
+				scrollable: true,
+			});
+
+			if (confirmed) {
+				await handleImportConfirm(text, csvOptions);
+			}
+		} catch (error) {
+			push({ type: "error", message: "Erreur lors de la lecture du fichier: " + (error instanceof Error ? error.message : "Erreur inconnue") });
+		}
 	}
 
-	async function handleImportConfirm(opts: { delimiter: string; hasHeader: boolean; numeroCol: number; valeurCol: number }) {
-		setImportModalOpen(false);
-		if (!importFileText) return;
+	async function handleImportConfirm(text: string, opts: { delimiter: string; hasHeader: boolean; numeroCol: number; valeurCol: number }) {
+		if (!text) return;
 
-		const finalParsed = parseCSV(importFileText, opts.delimiter, opts.hasHeader, 100000);
+		const finalParsed = parseCSV(text, opts.delimiter, opts.hasHeader, 100000);
 
 		const records: Array<{ numero_dossier: string; valeur_tampon: string }> = [];
 		for (const row of finalParsed.rows) {
@@ -124,7 +146,7 @@ const DatabaseManager: React.FC = () => {
 				push({ type: "success", message: "Base vidée avec succès" });
 				loadDossiers();
 			} catch (err) {
-				push({ type: "error", message: "Erreur lors du vidage: " + (err instanceof Error ? err.message : "Erreur inconnue") });
+				push({ type: "error", message: "Erreur lors de la suppression: " + (err instanceof Error ? err.message : "Erreur inconnue") });
 			}
 		}
 	};
@@ -186,7 +208,7 @@ const DatabaseManager: React.FC = () => {
 				) : (
 					<div className="overflow-x-auto">
 						<div className="overflow-x-auto max-h-[calc(1.75rem*20+2rem)]">
-							{/* ~20 rows visual limit */}
+							{/* ~20 rows limit */}
 							<table className="w-full">
 								<thead>
 									<tr className="border-b border-gray-200">
@@ -213,15 +235,6 @@ const DatabaseManager: React.FC = () => {
 					</div>
 				)}
 			</div>
-			<CSVImportModal
-				isOpen={importModalOpen}
-				onClose={() => setImportModalOpen(false)}
-				parsed={importPreview}
-				detectedDelimiter={importDetectedDelim}
-				rawText={importFileText}
-				initialHasHeader={true}
-				onConfirm={handleImportConfirm}
-			/>
 			{modalComponent}
 		</>
 	);

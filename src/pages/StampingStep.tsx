@@ -1,6 +1,6 @@
 import React from "react";
-import BatchStamper from "../managers/BatchStamper";
-import { usePDFContext } from "../../hooks/usePDFContext";
+import BatchStamper from "../components/managers/BatchStamper";
+import { usePDFContext } from "../hooks/usePDFContext";
 
 const StampingStep: React.FC = () => {
 	const { options } = usePDFContext();
