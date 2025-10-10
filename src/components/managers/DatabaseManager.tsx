@@ -114,9 +114,7 @@ const DatabaseManager: React.FC = () => {
 			});
 
 			if (confirmed) {
-				console.warn("debut import");
 				await handleImportConfirm(text, csvOptions);
-				console.warn("fin import");
 			}
 		} catch (error) {
 			push({ type: "error", message: "Erreur lors de la lecture du fichier: " + (error instanceof Error ? error.message : "Erreur inconnue"), delai: 6000 });
