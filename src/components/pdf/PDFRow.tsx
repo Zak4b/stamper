@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FileText, CheckCircle, AlertCircle, CreditCard as Edit2, Loader } from "lucide-react";
 import { PDFFile } from "../../types/PDFFile";
 
@@ -11,17 +11,10 @@ interface PDFRowProps {
 
 const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload }) => {
 	const [isEditing, setIsEditing] = useState(false);
-	const [editValue, setEditValue] = useState(pdfFile.numeroDossier);
-
-	// Synchroniser editValue quand numeroDossier change (ex: après OCR)
-	useEffect(() => {
-		if (!isEditing) {
-			setEditValue(pdfFile.numeroDossier);
-		}
-	}, [pdfFile.numeroDossier, isEditing]);
+	const [editValue, setEditValue] = useState<string>("");
 
 	const handleStartEditing = () => {
-		setEditValue(pdfFile.numeroDossier); // Synchroniser avec la valeur actuelle
+		setEditValue(pdfFile.numeroDossier || "");
 		setIsEditing(true);
 	};
 
@@ -34,10 +27,7 @@ const PDFRow: React.FC<PDFRowProps> = ({ pdfFile, index, onUpdatePDF, onDownload
 		});
 	};
 
-	const handleCancelEdit = () => {
-		setIsEditing(false);
-		setEditValue(pdfFile.numeroDossier); // Restaurer la valeur originale
-	};
+	const handleCancelEdit = () => setIsEditing(false);
 
 	const getStatusDisplay = () => {
 		switch (pdfFile.status) {
