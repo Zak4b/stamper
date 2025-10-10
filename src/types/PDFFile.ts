@@ -1,6 +1,6 @@
 export interface PDFFile {
 	file: File;
-	numeroDossier: string;
+	numeroDossier: string | null;
 	status: "pending" | "ocr" | "analyzed" | "processing" | "completed" | "error";
 	error?: string;
 	stampedData?: Uint8Array;

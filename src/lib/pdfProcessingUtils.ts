@@ -35,7 +35,7 @@ export async function analyzeFile(
 			updateFile(fileIndex, { ocrProgress: progress });
 		});
 
-		const detectedNumber = result.ids[0] || "NON DÉTECTÉ";
+		const detectedNumber = result.ids[0] || null;
 
 		// Marquer comme analysé
 		updateFile(fileIndex, {
@@ -98,7 +98,7 @@ export async function stampAllAnalyzedFiles(pdfFiles: PDFFile[], stampPosition: 
 		const pdfFile = pdfFiles[i];
 
 		// Tamponner seulement les fichiers analysés
-		if (pdfFile.status === "analyzed" && pdfFile.numeroDossier !== "NON DÉTECTÉ") {
+		if (pdfFile.status === "analyzed" && pdfFile.numeroDossier !== null) {
 			await stampFile(i, pdfFile, stampPosition, updateFile);
 		}
 	}
