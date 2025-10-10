@@ -1,5 +1,15 @@
 import { PDFFile } from "../types/PDFFile";
 
+export function downloadBlob(blob: Blob, filename: string): void {
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+
+	a.href = url;
+	a.download = filename;
+	a.click();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 /**
  * Télécharge tous les PDFs traités dans un fichier ZIP
  */
@@ -14,29 +24,15 @@ export async function downloadAll(pdfFiles: PDFFile[]): Promise<void> {
 	});
 
 	const content = await zip.generateAsync({ type: "blob" });
-	const url = URL.createObjectURL(content);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = "pdfs_tamponnés.zip";
-	a.click();
-
-	// Nettoyer l'URL après téléchargement
-	setTimeout(() => URL.revokeObjectURL(url), 100);
+	downloadBlob(content, "pdfs_tamponnés.zip");
 }
 
 /**
  * Télécharge un PDF individuel
  */
 export function downloadSingle(pdfFile: PDFFile): void {
-	if (!pdfFile.stampedData) return;
+	if (!pdfFile.stampedData || !pdfFile.docId) return;
 
 	const blob = new Blob([new Uint8Array(pdfFile.stampedData)], { type: "application/pdf" });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = `${pdfFile.docId}_tamponné.pdf`;
-	a.click();
-
-	// Nettoyer l'URL après téléchargement
-	setTimeout(() => URL.revokeObjectURL(url), 100);
+	downloadBlob(blob, `${pdfFile.docId}_tamponné.pdf`);
 }

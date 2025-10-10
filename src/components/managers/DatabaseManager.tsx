@@ -6,6 +6,7 @@ import { Plus, Trash2, Upload, Download } from "lucide-react";
 import { clearAllDossiers } from "../../lib/database";
 import { useToasts } from "../../hooks/useToasts";
 import { useConfirmModal } from "../../hooks/useConfirmModal";
+import { downloadBlob } from "../../lib/downloadUtils";
 
 const DatabaseManager: React.FC = () => {
 	const { push } = useToasts();
@@ -105,11 +106,7 @@ const DatabaseManager: React.FC = () => {
 		});
 
 		const blob = new Blob([csv.join("\n")], { type: "text/csv" });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = "dossiers.csv";
-		a.click();
+		downloadBlob(blob, "dossiers.csv");
 	}
 
 	const handleClearDatabase = async () => {
