@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { ToastContext, ToastContextValue, Toast } from "../../lib/toastContext";
+import { ToastContext, ToastContextValue, Toast } from "../../contexts/toastContext";
 
 const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const [toasts, setToasts] = useState<Toast[]>([]);
