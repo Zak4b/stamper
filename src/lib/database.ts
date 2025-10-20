@@ -5,8 +5,6 @@ export interface Dossier {
 	id: number;
 	numero_dossier: string;
 	valeur_tampon: string;
-	created_at: string;
-	updated_at: string;
 }
 
 type SQLDatabase = initSqlJs.Database;
@@ -61,7 +59,7 @@ export function saveDatabase() {
 
 export async function getAllDossiers(): Promise<Dossier[]> {
 	const database = await initDatabase();
-	const results = database.exec("SELECT * FROM dossiers ORDER BY created_at DESC");
+	const results = database.exec("SELECT * FROM dossiers ORDER BY id DESC");
 
 	if (results.length === 0) return [];
 
