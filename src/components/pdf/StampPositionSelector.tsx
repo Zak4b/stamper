@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { StampPosition } from "../../lib/pdfStamper";
 import { usePDFRenderingContext } from "../../hooks/usePDFRenderingContext";
 import PDFRenderer from "./PDFRenderer";
+import { appConfig } from "../../config/appConfig";
 
 interface Props {
 	pdfFile: File;
@@ -16,26 +17,60 @@ const PositionMarker: React.FC<{ position: StampPosition | null }> = ({ position
 	if (!position || position.page !== currentPage || !canvasRef.current) return null;
 
 	const canvas = canvasRef.current;
+	const scale = 1.5; // Échelle par défaut du PDF renderer
 
 	return (
 		<div
-			className="absolute w-6 h-6 -ml-3 -mt-3 bg-red-500 rounded-full border-2 border-white shadow-lg pointer-events-none"
+			className="absolute pointer-events-none whitespace-nowrap select-none"
 			style={{
 				left: `${canvas.offsetLeft + (position.x / canvas.width) * canvas.offsetWidth}px`,
 				top: `${canvas.offsetTop + (position.y / canvas.height) * canvas.offsetHeight}px`,
+				fontFamily: appConfig.stampStyle.fontFamily,
+				fontSize: `${appConfig.stampStyle.fontSize * scale}px`,
+				color: appConfig.stampStyle.fontColor,
+				lineHeight: 1,
+				transform: "translateY(calc(-100% + 0.25em))",
 			}}
-		/>
+		>
+			{`${new Date().toLocaleDateString("fr-FR", {
+				day: "numeric",
+				month: "numeric",
+				year: "numeric",
+			})}`}
+		</div>
 	);
 };
 
 const StampPositionSelector: React.FC<Props> = ({ pdfFile, onPositionSelected, currentPosition }) => {
 	const [position, setPosition] = useState<StampPosition | null>(currentPosition || null);
 	const [currentPage, setCurrentPage] = useState(0);
+	const [isDragging, setIsDragging] = useState(false);
 
-	function handleCanvasClick(x: number, y: number) {
+	function handleMouseDown(x: number, y: number) {
+		setIsDragging(true);
 		const newPosition: StampPosition = { x, y, page: currentPage };
 		setPosition(newPosition);
-		onPositionSelected(newPosition);
+	}
+
+	function handleMouseMove(x: number, y: number) {
+		if (isDragging) {
+			const newPosition: StampPosition = { x, y, page: currentPage };
+			setPosition(newPosition);
+		}
+	}
+
+	function handleMouseUp() {
+		if (isDragging && position) {
+			setIsDragging(false);
+			onPositionSelected(position);
+		}
+	}
+
+	function handleMouseLeave() {
+		if (isDragging && position) {
+			setIsDragging(false);
+			onPositionSelected(position);
+		}
 	}
 
 	function handlePageChange(page: number) {
@@ -43,7 +78,10 @@ const StampPositionSelector: React.FC<Props> = ({ pdfFile, onPositionSelected, c
 	}
 
 	const mouseEventHandlers = {
-		onClick: handleCanvasClick,
+		onMouseDown: handleMouseDown,
+		onMouseMove: handleMouseMove,
+		onMouseUp: handleMouseUp,
+		onMouseLeave: handleMouseLeave,
 	};
 
 	const additionalControls = position && (
@@ -59,6 +97,7 @@ const StampPositionSelector: React.FC<Props> = ({ pdfFile, onPositionSelected, c
 			title="Sélectionner la position du tampon"
 			additionalControls={additionalControls}
 			mouseEventHandlers={mouseEventHandlers}
+			canvasClassName={isDragging ? "cursor-grabbing mx-auto" : "cursor-grab mx-auto"}
 		>
 			<PositionMarker position={position} />
 		</PDFRenderer>
