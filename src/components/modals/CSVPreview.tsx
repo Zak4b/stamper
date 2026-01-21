@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { type CSVImportOptions } from "../../lib/csvHelper";
+import { type CSVImportOptions, formatValue } from "../../lib/csvHelper";
 
 interface CSVPreviewProps {
 	rawText: string;
@@ -21,6 +21,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 	const [hasHeader, setHasHeader] = React.useState<boolean>(initialHasHeader);
 	const [numeroCol, setNumeroCol] = React.useState<number>(0);
 	const [valeurCol, setValeurCol] = React.useState<number>(1);
+	const [format, setFormat] = React.useState<"none" | "date">("none");
 	const [parsed, setParsed] = React.useState<{ header?: string[]; rows: string[][] } | null>(null);
 
 	// Parse CSV when options change
@@ -37,8 +38,8 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 
 	// Notify parent of option changes
 	React.useEffect(() => {
-		onOptionsChange({ delimiter, hasHeader, idCol: numeroCol, valCol: valeurCol });
-	}, [delimiter, hasHeader, numeroCol, valeurCol, onOptionsChange]);
+		onOptionsChange({ delimiter, hasHeader, idCol: numeroCol, valCol: valeurCol, format });
+	}, [delimiter, hasHeader, numeroCol, valeurCol, format, onOptionsChange]);
 
 	const maxCols = useMemo(() => {
 		if (!parsed) return 0;
@@ -108,6 +109,12 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 							</option>
 						))}
 					</select>
+
+					<label className="text-sm">Format</label>
+					<select value={format} onChange={(e) => setFormat(e.target.value as "none" | "date")} className="px-3 py-2 border rounded">
+						<option value="none">Aucun</option>
+						<option value="date">Date (JJ/MM/AAAA)</option>
+					</select>
 				</div>
 			</div>
 
@@ -137,7 +144,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 										{Array.from({ length: maxCols }).map((_, ci) => (
 											<td key={ci} className={`px-3 py-2 align-top border-b ${ci === numeroCol ? "bg-blue-50" : ci === valeurCol ? "bg-green-50" : ""}`}>
 												<span className={`${ci === numeroCol ? "font-medium text-blue-900" : ci === valeurCol ? "font-medium text-green-900" : "text-gray-700"}`}>
-													{row[ci] || "—"}
+													{row[ci] ? (ci === valeurCol ? formatValue(row[ci], format) : row[ci]) : "—"}
 												</span>
 											</td>
 										))}
