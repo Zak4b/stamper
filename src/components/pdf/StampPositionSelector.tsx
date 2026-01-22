@@ -21,7 +21,7 @@ const PositionMarker: React.FC<{ position: StampPosition | null }> = ({ position
 
 	return (
 		<div
-			className="absolute pointer-events-none whitespace-nowrap select-none"
+			className="absolute pointer-events-none whitespace-nowrap select-none bg-white/80 border border-blue-600 rounded px-1"
 			style={{
 				left: `${canvas.offsetLeft + (position.x / canvas.width) * canvas.offsetWidth}px`,
 				top: `${canvas.offsetTop + (position.y / canvas.height) * canvas.offsetHeight}px`,
