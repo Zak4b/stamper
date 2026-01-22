@@ -8,6 +8,10 @@ export interface Dossier {
 	updated_at?: string;
 }
 
+interface DbUpdateResult {
+	changes: number;
+}
+
 // Détection de l'environnement
 const isElectron = typeof window !== 'undefined' && window.electron !== undefined;
 
@@ -30,7 +34,7 @@ const dbAPI = {
 		return all.find(d => d.numero_dossier === numero);
 	},
 
-	async insert(numero: string, valeur: string): Promise<any> {
+	async insert(numero: string, valeur: string): Promise<DbUpdateResult> {
 		if (isElectron) {
 			return window.electron!.db.insert(numero, valeur);
 		}
@@ -47,7 +51,7 @@ const dbAPI = {
 		return { changes: 1 };
 	},
 
-	async update(numero: string, valeur: string): Promise<any> {
+	async update(numero: string, valeur: string): Promise<DbUpdateResult> {
 		if (isElectron) {
 			return window.electron!.db.update(numero, valeur);
 		}
@@ -62,7 +66,7 @@ const dbAPI = {
 		return { changes: 0 };
 	},
 
-	async delete(numero: string): Promise<any> {
+	async delete(numero: string): Promise<DbUpdateResult> {
 		if (isElectron) {
 			return window.electron!.db.delete(numero);
 		}
@@ -72,7 +76,7 @@ const dbAPI = {
 		return { changes: all.length - filtered.length };
 	},
 
-	async deleteAll(): Promise<any> {
+	async deleteAll(): Promise<DbUpdateResult> {
 		if (isElectron) {
 			return window.electron!.db.deleteAll();
 		}
@@ -92,7 +96,7 @@ const dbAPI = {
 		);
 	},
 
-	async import(dossiers: Array<{ numero_dossier: string; valeur_tampon: string }>): Promise<any> {
+	async import(dossiers: Array<{ numero_dossier: string; valeur_tampon: string }>): Promise<DbUpdateResult> {
 		if (isElectron) {
 			return window.electron!.db.import(dossiers);
 		}
@@ -126,11 +130,6 @@ const dbAPI = {
 		};
 	},
 };
-
-// Fonction d'initialisation (maintenant juste un no-op)
-export async function initDatabase(): Promise<void> {
-	console.log('Base de données prête (better-sqlite3 via IPC)');
-}
 
 // Fonctions publiques qui utilisent dbAPI
 export async function getAllDossiers(): Promise<Dossier[]> {
@@ -179,12 +178,6 @@ export async function importFromCSV(records: CSVImportRecord[]): Promise<void> {
 
 export async function getDatabaseStats() {
 	return dbAPI.getStats();
-}
-
-// Fonction de sauvegarde (plus nécessaire avec better-sqlite3, auto-sauvegardé)
-export function saveDatabase() {
-	// No-op pour better-sqlite3, la DB est sauvegardée automatiquement
-	console.log('Sauvegarde automatique (better-sqlite3)');
 }
 
 export async function exportToCSV(): Promise<string> {

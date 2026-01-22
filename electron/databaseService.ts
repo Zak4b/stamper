@@ -14,8 +14,6 @@ export function initDatabase(): Database.Database {
     const userDataPath = app.getPath('userData');
     const dbPath = path.join(userDataPath, 'pdfstamper.db');
 
-    console.log('Initialisation de la base de données:', dbPath);
-
     // S'assurer que le dossier existe
     if (!fs.existsSync(userDataPath)) {
       fs.mkdirSync(userDataPath, { recursive: true });
@@ -39,7 +37,6 @@ export function initDatabase(): Database.Database {
       CREATE INDEX IF NOT EXISTS idx_numero_dossier ON dossiers(numero_dossier);
     `);
 
-    console.log('Base de données initialisée avec succès');
     return db;
   } catch (error) {
     console.error('Erreur lors de l\'initialisation de la base de données:', error);

@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
-import * as dbModule from './database';
+import * as dbModule from './databaseService';
 import './polyfill';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -65,7 +65,6 @@ app.whenReady().then(() => {
   // Initialiser la base de données
   try {
     dbModule.initDatabase();
-    console.log('✓ Base de données initialisée');
   } catch (error) {
     console.error('✗ Erreur lors de l\'initialisation de la DB:', error);
   }

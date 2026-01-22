@@ -1,4 +1,3 @@
-import AppHeader from "./components/navigation/AppHeader";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import NavigationSteps from "./components/navigation/NavigationSteps";
 import { PDFProvider } from "./contexts/PDFContext";
@@ -17,7 +16,6 @@ function AppContent() {
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
 			<div className="max-w-7xl mx-auto px-4 py-8">
-				<AppHeader />
 
 				<NavigationSteps currentStep={currentStep} samplePDF={samplePDF} stampPosition={!!options.stampPosition} onStepChange={setCurrentStep} />
 				<Suspense fallback={<LoadingSpinner />}>
