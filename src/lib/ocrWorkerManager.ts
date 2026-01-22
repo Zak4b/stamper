@@ -98,6 +98,23 @@ export class OCRWorkerManager {
 	private async createWorker(): Promise<void> {
 		try {
 			console.debug("Création du worker Tesseract...");
+			
+			// Détection de l'environnement
+			const isElectron = typeof window !== 'undefined' && window.electron !== undefined;
+			
+			// Configuration des chemins selon l'environnement
+			const config = isElectron ? {
+				// Dans Electron, utiliser des chemins relatifs
+				workerPath: "./tesseract/worker.min.js",
+				langPath: "./tesseract",
+				corePath: "./tesseract/tesseract-core.wasm.js",
+			} : {
+				// Dans le navigateur, utiliser des chemins absolus
+				workerPath: "/tesseract/worker.min.js",
+				langPath: "/tesseract",
+				corePath: "/tesseract/tesseract-core.wasm.js",
+			};
+			
 			this.worker = await createWorker("fra", 1, {
 				logger: (m: { status: string; progress: number }) => {
 					// Utiliser la tâche courante pour le callback de progression
@@ -105,10 +122,10 @@ export class OCRWorkerManager {
 						this.currentTask.onProgress(m.progress * 100);
 					}
 				},
-				workerPath: "/tesseract/worker.min.js",
-				langPath: "/tesseract",
-				corePath: "/tesseract/tesseract-core.wasm.js",
+				...config,
 			});
+			
+			console.debug("Worker Tesseract créé avec succès");
 		} catch (error) {
 			console.error("Erreur lors de la création du worker:", error);
 			throw error;

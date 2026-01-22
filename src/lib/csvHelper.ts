@@ -62,8 +62,8 @@ export type CSVImportOptions = {
 };
 
 export type CSVImportRecord = {
-	id: string;
-	value: string;
+	numero_dossier: string;
+	valeur_tampon: string;
 };
 
 export type CSVImportResult = {
@@ -123,7 +123,7 @@ export function processCSVForImport(text: string, options: CSVImportOptions): CS
 
 		if (numero && valeur) {
 			valeur = formatValue(valeur, options.format);
-			records.push({ id: numero, value: valeur });
+			records.push({ numero_dossier: numero, valeur_tampon: valeur });
 			validRows++;
 		} else {
 			invalidRows++;
