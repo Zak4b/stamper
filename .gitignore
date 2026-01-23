@@ -8,9 +8,20 @@ lerna-debug.log*
 
 node_modules
 dist
-public/sql.js/
+dist-electron
+release
 dist-ssr
 *.local
+
+# Electron build artifacts
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.snap
+out/
+.webpack/
 
 .vscode/*
 !.vscode/extensions.json

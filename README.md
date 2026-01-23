@@ -1,54 +1,15 @@
-# PDF Stamping Web Application
+# PDF Stamper
 
-Une application web moderne pour tamponner automatiquement des documents PDF avec reconnaissance OCR et gestion de base de données.
+Application Electron pour tamponner automatiquement des documents PDF avec reconnaissance OCR.
 
 ## 🚀 Fonctionnalités
 
-### ✨ Traitement Automatisé
-
-- **Reconnaissance OCR** : Extraction automatique des numéros de dossier dans les PDFs
-- **Tamponnage intelligent** : Application automatique de tampons personnalisés
-- **Traitement par lot** : Gestion simultanée de multiples documents PDF
-- **Pipeline automatique** : OCR → Analyse → Tamponnage en continu
-
-### 📄 Gestion des PDFs
-
-- **Chargement multiple** : Sélection de plusieurs fichiers en file d'attente
-- **Aperçu en temps réel** : Visualisation des PDFs avec sélection de zones
-- **Téléchargement flexible** : Fichiers individuels ou archive ZIP complète
-- **Édition manuelle** : Correction des numéros détectés par OCR
-
-### 🎯 Configuration Avancée
-
-- **Sélection de zones OCR** : Définition précise des régions à analyser
-- **Positionnement de tampons** : Interface visuelle pour placer les tampons
-- **Gestion des orientations** : Détection et correction automatique des rotations
-- **Base de données** : Correspondance numéros de dossier ↔ valeurs de tampon
-
-### 📊 Suivi et Monitoring
-
-- **Statistiques en temps réel** : Progression du traitement
-- **États détaillés** : En attente, OCR, Analysé, Traitement, Terminé, Erreur
-- **Gestion d'erreurs** : Affichage et traitement des problèmes
-
-## 🏗️ Architecture
-
-### Librairies Spécialisées
-
-- **Tesseract.js** : Reconnaissance OCR côté client
-- **PDF-lib** : Manipulation et tamponnage des PDFs
-- **SQL.js** : Base de données locale SQLite
-- **JSZip** : Création d'archives ZIP
-- **PDF.js** : Rendu et visualisation des PDFs
+- **Reconnaissance OCR** : Extraction automatique des numéros de dossier
+- **Tamponnage automatique** : Application de tampons personnalisés sur les PDFs
+- **Traitement par lot** : Gestion de multiples documents simultanément
+- **Base de données** : Import CSV pour correspondances numéro ↔ valeur
 
 ## 🛠️ Installation
-
-### Prérequis
-
-- Node.js (v16+)
-- npm
-
-### Installation
 
 ```bash
 git clone <repository-url>
@@ -56,68 +17,24 @@ cd pdf
 npm install
 ```
 
-### Build de production
+## 📖 Utilisation
+
+1. **Base de données** : Importer un CSV avec les correspondances (numéro_dossier, valeur_tampon)
+2. **Configuration OCR** : Charger un PDF de référence et sélectionner la zone à analyser
+3. **Positionnement** : Définir la position du tampon sur le PDF
+4. **Traitement** : Charger les PDFs à traiter et télécharger les résultats
+
+## 🚀 Démarrage
 
 ```bash
+# Mode développement
+npm run dev
+
+# Build de production
 npm run build
-npm run preview
 ```
 
-## 🔧 Configuration
+## 📋 Prérequis
 
-### Structure de la base de données
-
-```sql
-CREATE TABLE dossiers (
-    id INTEGER PRIMARY KEY,
-    numero_dossier TEXT UNIQUE,
-    valeur_tampon TEXT,
-);
-```
-
-## 📖 Guide d'utilisation
-
-### 1. Configuration de la base de données
-
-- Importer un fichier CSV avec les correspondances
-
-### 2. Configuration OCR
-
-- Charger un PDF de référence
-- Sélectionner la zone à analyser
-
-### 3. Positionnement du tampon
-
-- Cliquer pour définir la position du tampon
-
-### 4. Traitement par lot
-
-- Charger les PDFs à traiter
-- Téléchargement des résultats
-
-## 🔍 Fonctionnalités Avancées
-
-### Détection d'anomalies
-
-- **Auto-rotation** : Correction automatique des orientations
-- **Validation OCR** : Vérification de la confiance des résultats
-
-### Performance
-
-- **Traitement asynchrone** : Non-bloquant pour l'interface
-- **Lazy loading** : Chargement à la demande des composants
-
-## 🚦 États du workflow
-
-```
-PENDING → OCR → ANALYZED → PROCESSING → COMPLETED
-   ↓                          ↓
- ERROR  ←――――――――――――――――――― ERROR
-```
-
-- **PENDING** : En attente de traitement
-- **OCR** : Reconnaissance en cours
-- **ANALYZED** : Prêt pour tamponnage
-- **PROCESSING** : Tamponnage en cours
-- **COMPLETED** : Terminé avec succès
-- **ERROR** : Erreur à traiter
+- Node.js (v20+)
+- npm

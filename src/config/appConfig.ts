@@ -1,5 +1,7 @@
 import type { AppConfig, IDPattern } from "../types/Config";
 
+export const GITHUB_URL = "https://github.com/Zak4b";
+
 export const appConfig: AppConfig = {
 	idPatterns: [
 		{

@@ -46,7 +46,6 @@ const Toolbar: React.FC<ToolbarProps> = ({ label }) => {
 
 	const handleDownloadAll = async () => {
 		if (loadedPDFs.some((pdf) => pdf.status !== "completed")) {
-			console.debug("Some PDFs are not yet completed");
 			const confirmed = await confirm({
 				title: "Avertissement",
 				description: `Certains PDFs ne sont pas encore traités. Voulez-vous tout de même continuer ?`,

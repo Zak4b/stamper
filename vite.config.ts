@@ -1,11 +1,39 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import electron from "vite-plugin-electron/simple";
 
 // https://vitejs.dev/config/
 export default defineConfig({
 	plugins: [
 		react(),
+		electron({
+			main: {
+				entry: "electron/main.ts",
+				vite: {
+					build: {
+						outDir: "dist-electron",
+						rollupOptions: {
+							external: ["electron", "better-sqlite3"],
+						},
+					},
+				},
+			},
+			preload: {
+				input: "electron/preload.ts",
+				vite: {
+					build: {
+						outDir: "dist-electron",
+						rollupOptions: {
+							output: {
+								format: "cjs",
+								entryFileNames: "[name].cjs",
+							},
+						},
+					},
+				},
+			},
+		}),
 		viteStaticCopy({
 			targets: [
 				// Copier les fichiers Tesseract WASM depuis node_modules
@@ -25,15 +53,6 @@ export default defineConfig({
 				{
 					src: "node_modules/tesseract.js/dist/worker.min.js",
 					dest: "tesseract",
-				},
-				// Copier les fichiers SQL.js WASM depuis node_modules
-				{
-					src: "node_modules/sql.js/dist/sql-wasm.js",
-					dest: "sql.js",
-				},
-				{
-					src: "node_modules/sql.js/dist/sql-wasm.wasm",
-					dest: "sql.js",
 				},
 			],
 		}),

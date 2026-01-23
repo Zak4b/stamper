@@ -58,11 +58,12 @@ export type CSVImportOptions = {
 	hasHeader: boolean;
 	idCol: number;
 	valCol: number;
+	format?: "none" | "date";
 };
 
 export type CSVImportRecord = {
-	id: string;
-	value: string;
+	numero_dossier: string;
+	valeur_tampon: string;
 };
 
 export type CSVImportResult = {
@@ -71,6 +72,40 @@ export type CSVImportResult = {
 	validRows: number;
 	invalidRows: number;
 };
+
+export function formatValue(val: string, format?: "none" | "date"): string {
+	if (!format || format === "none") return val;
+	if (format === "date") {
+		// Tentative de parsing manuel pour DD/MM/YYYY ou DD/MM/YY
+		const dmyMatch = val.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+		if (dmyMatch) {
+			const day = parseInt(dmyMatch[1], 10);
+			const month = parseInt(dmyMatch[2], 10) - 1;
+			let year = parseInt(dmyMatch[3], 10);
+
+			if (year < 100) {
+				year += 2000;
+			}
+
+			const d = new Date(year, month, day);
+			if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month) {
+				const fDay = String(d.getDate()).padStart(2, "0");
+				const fMonth = String(d.getMonth() + 1).padStart(2, "0");
+				const fYear = d.getFullYear();
+				return `${fDay}/${fMonth}/${fYear}`;
+			}
+		}
+
+		// Fallback sur le parsing natif si le format ne correspond pas à DD/MM/YY
+		const d = new Date(val);
+		if (isNaN(d.getTime())) return val;
+		const day = String(d.getDate()).padStart(2, "0");
+		const month = String(d.getMonth() + 1).padStart(2, "0");
+		const year = d.getFullYear();
+		return `${day}/${month}/${year}`;
+	}
+	return val;
+}
 
 /**
  * Traite un fichier CSV complet et extrait les enregistrements selon les options spécifiées
@@ -84,10 +119,11 @@ export function processCSVForImport(text: string, options: CSVImportOptions): CS
 
 	for (const row of finalParsed.rows) {
 		const numero = row[options.idCol]?.trim();
-		const valeur = row[options.valCol]?.trim();
+		let valeur = row[options.valCol]?.trim();
 
 		if (numero && valeur) {
-			records.push({ id: numero, value: valeur });
+			valeur = formatValue(valeur, options.format);
+			records.push({ numero_dossier: numero, valeur_tampon: valeur });
 			validRows++;
 		} else {
 			invalidRows++;

@@ -47,9 +47,9 @@ const DatabaseManager: React.FC = () => {
 		}
 	}
 
-	async function deleteDossier(id: number) {
+	async function deleteDossier(numero: string) {
 		try {
-			await deleteDossierDB(id);
+			await deleteDossierDB(numero);
 			loadDossiers();
 		} catch (error) {
 			push({ type: "error", message: "Erreur: " + (error instanceof Error ? error.message : "Erreur inconnue") });
@@ -215,7 +215,7 @@ const DatabaseManager: React.FC = () => {
 											<td className="py-3 px-4 text-sm text-gray-900">{dossier.numero_dossier}</td>
 											<td className="py-3 px-4 text-sm text-gray-900">{dossier.valeur_tampon}</td>
 											<td className="py-3 px-4 text-right">
-												<button onClick={() => deleteDossier(dossier.id)} className="text-red-600 hover:text-red-700 transition-colors">
+											<button onClick={() => deleteDossier(dossier.numero_dossier)} className="text-red-600 hover:text-red-700 transition-colors">
 													<Trash2 className="w-4 h-4" />
 												</button>
 											</td>

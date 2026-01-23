@@ -1,131 +1,183 @@
-import initSqlJs from "sql.js";
 import { CSVImportRecord } from "./csvHelper";
 
 export interface Dossier {
 	id: number;
 	numero_dossier: string;
 	valeur_tampon: string;
+	created_at?: string;
+	updated_at?: string;
 }
 
-type SQLDatabase = initSqlJs.Database;
+interface DbUpdateResult {
+	changes: number;
+}
 
-type SQLLibShape = {
-	Database: new (data?: ArrayLike<number> | Buffer | null) => SQLDatabase;
+// Détection de l'environnement
+const isElectron = typeof window !== 'undefined' && window.electron !== undefined;
+
+// Wrapper pour gérer Electron et le navigateur
+const dbAPI = {
+	async getAll(): Promise<Dossier[]> {
+		if (isElectron) {
+			return window.electron!.db.getAll();
+		}
+		// Fallback localStorage pour le navigateur
+		const data = localStorage.getItem('pdfstamper_dossiers');
+		return data ? JSON.parse(data) : [];
+	},
+
+	async getByNumero(numero: string): Promise<Dossier | undefined> {
+		if (isElectron) {
+			return window.electron!.db.getByNumero(numero);
+		}
+		const all = await this.getAll();
+		return all.find(d => d.numero_dossier === numero);
+	},
+
+	async insert(numero: string, valeur: string): Promise<DbUpdateResult> {
+		if (isElectron) {
+			return window.electron!.db.insert(numero, valeur);
+		}
+		const all = await this.getAll();
+		const newDossier: Dossier = {
+			id: Date.now(),
+			numero_dossier: numero,
+			valeur_tampon: valeur,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
+		};
+		all.push(newDossier);
+		localStorage.setItem('pdfstamper_dossiers', JSON.stringify(all));
+		return { changes: 1 };
+	},
+
+	async update(numero: string, valeur: string): Promise<DbUpdateResult> {
+		if (isElectron) {
+			return window.electron!.db.update(numero, valeur);
+		}
+		const all = await this.getAll();
+		const index = all.findIndex(d => d.numero_dossier === numero);
+		if (index >= 0) {
+			all[index].valeur_tampon = valeur;
+			all[index].updated_at = new Date().toISOString();
+			localStorage.setItem('pdfstamper_dossiers', JSON.stringify(all));
+			return { changes: 1 };
+		}
+		return { changes: 0 };
+	},
+
+	async delete(numero: string): Promise<DbUpdateResult> {
+		if (isElectron) {
+			return window.electron!.db.delete(numero);
+		}
+		const all = await this.getAll();
+		const filtered = all.filter(d => d.numero_dossier !== numero);
+		localStorage.setItem('pdfstamper_dossiers', JSON.stringify(filtered));
+		return { changes: all.length - filtered.length };
+	},
+
+	async deleteAll(): Promise<DbUpdateResult> {
+		if (isElectron) {
+			return window.electron!.db.deleteAll();
+		}
+		localStorage.removeItem('pdfstamper_dossiers');
+		return { changes: 1 };
+	},
+
+	async search(query: string): Promise<Dossier[]> {
+		if (isElectron) {
+			return window.electron!.db.search(query);
+		}
+		const all = await this.getAll();
+		const lowerQuery = query.toLowerCase();
+		return all.filter(d => 
+			d.numero_dossier.toLowerCase().includes(lowerQuery) ||
+			d.valeur_tampon.toLowerCase().includes(lowerQuery)
+		);
+	},
+
+	async import(dossiers: Array<{ numero_dossier: string; valeur_tampon: string }>): Promise<DbUpdateResult> {
+		if (isElectron) {
+			return window.electron!.db.import(dossiers);
+		}
+		const all = await this.getAll();
+		for (const dossier of dossiers) {
+			const existing = all.find(d => d.numero_dossier === dossier.numero_dossier);
+			if (existing) {
+				existing.valeur_tampon = dossier.valeur_tampon;
+				existing.updated_at = new Date().toISOString();
+			} else {
+				all.push({
+					id: Date.now() + Math.random(),
+					...dossier,
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+				});
+			}
+		}
+		localStorage.setItem('pdfstamper_dossiers', JSON.stringify(all));
+		return { changes: dossiers.length };
+	},
+
+	async getStats() {
+		if (isElectron) {
+			return window.electron!.db.getStats();
+		}
+		const all = await this.getAll();
+		return {
+			totalDossiers: all.length,
+			dbPath: 'localStorage',
+		};
+	},
 };
 
-let SQL: SQLLibShape | null = null;
-let db: SQLDatabase | null = null;
-
-export async function initDatabase(): Promise<SQLDatabase> {
-	if (db) return db;
-
-	if (!SQL) {
-		SQL = (await initSqlJs({
-			locateFile: (file: string) => `/sql.js/${file}`,
-		})) as unknown as SQLLibShape;
-	}
-
-	const SQLLib = SQL as SQLLibShape;
-
-	const savedData = localStorage.getItem("pdfstamper_db");
-
-	if (savedData) {
-		const binaryData = Uint8Array.from(atob(savedData), (c) => c.charCodeAt(0));
-		db = new SQLLib.Database(binaryData);
-	} else {
-		db = new SQLLib.Database();
-
-		db.run(`
-	  CREATE TABLE IF NOT EXISTS dossiers (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		numero_dossier TEXT UNIQUE NOT NULL,
-		valeur_tampon TEXT NOT NULL
-	  )
-	`);
-
-		saveDatabase();
-	}
-
-	return db as SQLDatabase;
-}
-
-export function saveDatabase() {
-	if (!db) return;
-
-	const data = db.export();
-	const base64 = btoa(String.fromCharCode(...data));
-	localStorage.setItem("pdfstamper_db", base64);
-}
-
+// Fonctions publiques qui utilisent dbAPI
 export async function getAllDossiers(): Promise<Dossier[]> {
-	const database = await initDatabase();
-	const results = database.exec("SELECT * FROM dossiers ORDER BY id DESC");
+	return dbAPI.getAll();
+}
 
-	if (results.length === 0) return [];
+export async function getDossierByNumero(numero: string): Promise<Dossier | undefined> {
+	return dbAPI.getByNumero(numero);
+}
 
-	const dossiers: Dossier[] = [];
-	const columns = results[0].columns;
-	const values = results[0].values;
-
-	for (const row of values) {
-		const dossier = {} as Record<string, unknown>;
-		columns.forEach((col: string, i: number) => {
-			dossier[col] = row[i];
-		});
-		dossiers.push(dossier as unknown as Dossier);
+export async function addOrUpdateDossier(numero: string, valeur: string): Promise<void> {
+	const existing = await dbAPI.getByNumero(numero);
+	if (existing) {
+		await dbAPI.update(numero, valeur);
+	} else {
+		await dbAPI.insert(numero, valeur);
 	}
-
-	return dossiers;
 }
 
-export async function addDossier(numeroDossier: string, valeurTampon: string): Promise<void> {
-	const database = await initDatabase();
-
-	database.run("INSERT INTO dossiers (numero_dossier, valeur_tampon) VALUES (?, ?)", [numeroDossier, valeurTampon]);
-
-	saveDatabase();
+// Alias pour compatibilité
+export async function addDossier(numero: string, valeur: string): Promise<void> {
+	return addOrUpdateDossier(numero, valeur);
 }
 
-export async function deleteDossier(id: number): Promise<void> {
-	const database = await initDatabase();
-
-	database.run("DELETE FROM dossiers WHERE id = ?", [id]);
-
-	saveDatabase();
+// Alias pour compatibilité
+export async function importDossiers(records: CSVImportRecord[]): Promise<number> {
+	await importFromCSV(records);
+	return records.length;
 }
 
-export async function getDossierByNumero(numeroDossier: string): Promise<Dossier | null> {
-	const database = await initDatabase();
-	const results = database.exec("SELECT * FROM dossiers WHERE numero_dossier = ?", [numeroDossier]);
-
-	if (results.length === 0 || results[0].values.length === 0) return null;
-
-	const columns = results[0].columns;
-	const row = results[0].values[0];
-	const dossier = {} as Record<string, unknown>;
-
-	columns.forEach((col: string, i: number) => {
-		dossier[col] = row[i];
-	});
-
-	return dossier as unknown as Dossier;
+export async function deleteDossier(numero: string): Promise<void> {
+	await dbAPI.delete(numero);
 }
 
-export async function importDossiers(dossiers: CSVImportRecord[]): Promise<number> {
-	const database = await initDatabase();
-	let count = 0;
+export async function deleteAllDossiers(): Promise<void> {
+	await dbAPI.deleteAll();
+}
 
-	for (const dossier of dossiers) {
-		try {
-			database.run("INSERT OR IGNORE INTO dossiers (numero_dossier, valeur_tampon) VALUES (?, ?)", [dossier.id, dossier.value]);
-			count++;
-		} catch (error) {
-			console.error("Error importing dossier:", error);
-		}
-	}
+export async function searchDossiers(query: string): Promise<Dossier[]> {
+	return dbAPI.search(query);
+}
 
-	saveDatabase();
-	return count;
+export async function importFromCSV(records: CSVImportRecord[]): Promise<void> {
+	await dbAPI.import(records);
+}
+
+export async function getDatabaseStats() {
+	return dbAPI.getStats();
 }
 
 export async function exportToCSV(): Promise<string> {
@@ -140,7 +192,5 @@ export async function exportToCSV(): Promise<string> {
 }
 
 export async function clearAllDossiers(): Promise<void> {
-	const database = await initDatabase();
-	database.run("DELETE FROM dossiers");
-	saveDatabase();
+	await deleteAllDossiers();
 }
