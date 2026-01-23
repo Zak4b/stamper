@@ -5,6 +5,7 @@ interface ElectronAPI {
   getVersion: () => Promise<string>;
   getPath: (name: string) => Promise<string>;
   readFile: (filePath: string) => Promise<ArrayBuffer>;
+  openExternal: (url: string) => Promise<void>;
   db: {
     getAll: () => Promise<any[]>;
     getByNumero: (numero: string) => Promise<any>;

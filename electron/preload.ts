@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('electron', {
   // API pour lire un fichier
   readFile: (filePath: string) => ipcRenderer.invoke('app:readFile', filePath),
   
+  // API pour ouvrir une URL externe
+  openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+  
   // APIs de base de données
   db: {
     getAll: () => ipcRenderer.invoke('db:getAll'),

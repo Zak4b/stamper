@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -29,6 +29,7 @@ const createWindow = () => {
     title: 'PDF Stamper',
     backgroundColor: '#ffffff',
     show: false,
+    autoHideMenuBar: true, // Masquer la barre de menus (File, Edit, View, etc.)
   });
 
   // Afficher la fenêtre quand elle est prête
@@ -170,11 +171,23 @@ ipcMain.handle('db:getStats', async () => {
 
 // Gestionnaires IPC (si nécessaire pour des opérations natives)
 ipcMain.handle('app:getVersion', () => {
-  return app.getVersion();
+  // Lire la version depuis package.json
+  const packagePath = path.join(__dirname, '../package.json');
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
+    return packageJson.version || '1.0.0';
+  } catch (error) {
+    console.error('Erreur lors de la lecture de package.json:', error);
+    return '1.0.0';
+  }
 });
 
 ipcMain.handle('app:getPath', (_, name: string) => {
   return app.getPath(name as any);
+});
+
+ipcMain.handle('app:openExternal', (_, url: string) => {
+  shell.openExternal(url);
 });
 
 // Lire un fichier et retourner un ArrayBuffer
