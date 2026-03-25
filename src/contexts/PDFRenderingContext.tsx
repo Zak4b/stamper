@@ -1,7 +1,7 @@
 import { createContext, ReactNode } from "react";
 
 export interface PDFRenderingContextType {
-	canvasRef: React.RefObject<HTMLCanvasElement>;
+	canvasRef: React.RefObject<HTMLCanvasElement | null>;
 	currentPage: number;
 	pageCount: number;
 	getCanvasCoordinates: (e: React.MouseEvent<HTMLCanvasElement>) => { x: number; y: number };

@@ -22,7 +22,7 @@ const RegionOverlay: React.FC<{ region: Rectangle | null }> = ({ region }) => {
 
 	return (
 		<div
-			className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-20 pointer-events-none"
+			className="absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none"
 			style={{
 				left: `${canvas.offsetLeft + (region.left / canvas.width) * canvas.offsetWidth}px`,
 				top: `${canvas.offsetTop + (region.top / canvas.height) * canvas.offsetHeight}px`,
@@ -61,6 +61,7 @@ function useRegionSelection(initialRegion?: Rectangle | null) {
 	};
 
 	return {
+		isSelecting,
 		region,
 		setRegion,
 		mouseEventHandlers: {
@@ -75,12 +76,22 @@ function useRegionSelection(initialRegion?: Rectangle | null) {
 const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage }) => {
 	const [currentPage, setCurrentPage] = useState(initialPage || 0);
 	const isInitialMount = useRef(true);
-	const { region, setRegion, mouseEventHandlers } = useRegionSelection(currentRegion);
+	const { isSelecting, region, setRegion, mouseEventHandlers } = useRegionSelection(currentRegion);
 
 	// Synchroniser avec la région du context
 	useEffect(() => {
-		setRegion(currentRegion || null);
-	}, [currentRegion, setRegion]);
+		// Pendant le drag de la souris, on laisse la région locale piloter l'affichage.
+		// Sinon on peut créer une boucle de re-render (contexte -> props -> setRegion -> effet).
+		if (isSelecting) return;
+
+		setRegion((prev) => {
+			const next = currentRegion || null;
+			if (prev === next) return prev;
+			if (!prev || !next) return next;
+			if (prev.left === next.left && prev.top === next.top && prev.width === next.width && prev.height === next.height) return prev;
+			return next;
+		});
+	}, [currentRegion, isSelecting, setRegion]);
 
 	// Stable callback pour éviter les re-renders
 	const stableOnPageChanged = useCallback(
