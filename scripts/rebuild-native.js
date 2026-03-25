@@ -27,13 +27,13 @@ try {
     npm_config_target_arch: process.arch,
     npm_config_disturl: 'https://electronjs.org/headers',
     npm_config_runtime: 'electron',
-    npm_config_build_from_source: 'true',
     npm_config_cache: join(rootDir, '.npm'),
     npm_config_cache_min: '86400',
   };
 
   // Rebuild better-sqlite3
-  execSync('npm rebuild better-sqlite3 --build-from-source', {
+  // Ne force pas la compilation: d'abord télécharger le binaire précompilé
+  execSync('npm rebuild better-sqlite3', {
     cwd: rootDir,
     env,
     stdio: 'inherit',
