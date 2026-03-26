@@ -27,11 +27,19 @@ const ReviewStep: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber }
 	const handleRetry = async (pdfFile: PDFFile, index: number) => {
 		updatePDF(index, { status: "pending", error: undefined });
 
-		await analyzeFile(index, pdfFile.file, ocrPageNumber, ocrRegion, updatePDF);
+		const result = await analyzeFile(index, pdfFile.file, ocrPageNumber, ocrRegion, updatePDF);
+		if (result.ok) {
+			// Utiliser le résultat OCR directement pour éviter toute dépendance à un état React potentiellement périmé.
+			const analyzedFile: PDFFile = {
+				...pdfFile,
+				status: "analyzed",
+				docId: result.detectedNumber,
+				ocrConfidence: result.confidence,
+				detectedIds: result.ids,
+				ocrProgress: 100,
+			};
 
-		const updatedFile = loadedPDFs[index];
-		if (updatedFile.status === "analyzed") {
-			await stampFile(index, updatedFile, stampPosition, updatePDF);
+			await stampFile(index, analyzedFile, stampPosition, updatePDF);
 		}
 	};
 

@@ -1,3 +1,5 @@
+import { canvasToPdfUnits } from "../config/pdfRender";
+
 export interface StampPosition {
 	x: number;
 	y: number;
@@ -36,12 +38,12 @@ export async function stampPDF(pdfBytes: Uint8Array, config: StampConfig, isReor
 
 	// Convertir les coordonnées du système canvas (origine en haut à gauche)
 	// vers le système PDF-lib (origine en bas à gauche)
-	// et ajuster pour l'échelle utilisée dans le canvas (1.5)
+	// en appliquant l'échelle utilisée dans le canvas (PDF_RENDER_SCALE).
 
-	// Les coordonnées viennent d'un canvas avec scale: 1.5, il faut les convertir
-	const scaleFactor = 1.5;
-	const actualX = config.position.x / scaleFactor;
-	const actualY = config.position.y / scaleFactor;
+	// Les coordonnées viennent d'un canvas avec `PDF_RENDER_SCALE`.
+	// Convertir depuis l'espace canvas (pixels) vers l'espace PDF-lib.
+	const actualX = canvasToPdfUnits(config.position.x);
+	const actualY = canvasToPdfUnits(config.position.y);
 
 	let finalX: number;
 	let finalY: number;
@@ -82,7 +84,6 @@ export async function stampPDF(pdfBytes: Uint8Array, config: StampConfig, isReor
 		pageWidth,
 		pageHeight,
 		rotation,
-		scaleFactor,
 		finalX,
 		finalY,
 		textRotation,
@@ -136,6 +137,7 @@ export async function stampPDFWithAnomalyDetection(originalFile: File, config: S
 		console.log("PDF réorienté avec succès");
 	}
 
-	// Donc on peut toujours utiliser isReoriented = true pour simplifier les calculs
-	return await stampPDF(finalPdfBytes, config, true);
+	// Le flag doit refléter si on a réellement réorienté le PDF.
+	// Sinon, le mapping des coordonnées (canvas -> PDF-lib) peut être décalé.
+	return await stampPDF(finalPdfBytes, config, needsReorient);
 }

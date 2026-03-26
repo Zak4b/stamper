@@ -34,10 +34,19 @@ const RegionOverlay: React.FC<{ region: Rectangle | null }> = ({ region }) => {
 };
 
 // Hook personnalisé pour la logique de sélection de région
-function useRegionSelection(initialRegion?: Rectangle | null) {
+function useRegionSelection(
+	initialRegion: Rectangle | null | undefined,
+	onSelectionCommitted?: (region: Rectangle | undefined) => void
+) {
 	const [isSelecting, setIsSelecting] = useState(false);
 	const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
 	const [region, setRegion] = useState<Rectangle | null>(initialRegion || null);
+	const regionRef = useRef<Rectangle | null>(initialRegion || null);
+
+	// Keep a ref for commit on mouseUp (avoid depending on `region` state in handlers)
+	useEffect(() => {
+		regionRef.current = region;
+	}, [region]);
 
 	const handleMouseDown = (x: number, y: number) => {
 		setIsSelecting(true);
@@ -58,6 +67,12 @@ function useRegionSelection(initialRegion?: Rectangle | null) {
 
 	const handleMouseUp = () => {
 		setIsSelecting(false);
+
+		const r = regionRef.current;
+		if (onSelectionCommitted) {
+			// Ne notifie que si la zone est suffisamment grande
+			if (r && r.width > 10 && r.height > 10) onSelectionCommitted(r);
+		}
 	};
 
 	return {
@@ -76,7 +91,9 @@ function useRegionSelection(initialRegion?: Rectangle | null) {
 const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage }) => {
 	const [currentPage, setCurrentPage] = useState(initialPage || 0);
 	const isInitialMount = useRef(true);
-	const { isSelecting, region, setRegion, mouseEventHandlers } = useRegionSelection(currentRegion);
+	const { isSelecting, region, setRegion, mouseEventHandlers } = useRegionSelection(currentRegion, (r) => {
+		onRegionSelected(r);
+	});
 
 	// Synchroniser avec la région du context
 	useEffect(() => {
@@ -110,12 +127,7 @@ const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageC
 		stableOnPageChanged(currentPage);
 	}, [currentPage, stableOnPageChanged]);
 
-	// Écouter les changements de région pour notifier le parent
-	useEffect(() => {
-		if (region && region.width > 10 && region.height > 10) {
-			onRegionSelected(region);
-		}
-	}, [region, onRegionSelected]);
+	// Note: on ne notifie le parent qu'au mouseUp via `useRegionSelection`
 
 	function handleUseFullPage() {
 		setRegion(null);

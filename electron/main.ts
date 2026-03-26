@@ -183,7 +183,9 @@ ipcMain.handle('app:getVersion', () => {
 });
 
 ipcMain.handle('app:getPath', (_, name: string) => {
-  return app.getPath(name as any);
+  // Typage: éviter `any` en réutilisant le type attendu par `app.getPath`.
+  const pathName = name as Parameters<typeof app.getPath>[0];
+  return app.getPath(pathName);
 });
 
 ipcMain.handle('app:openExternal', (_, url: string) => {
@@ -198,5 +200,7 @@ ipcMain.handle('app:readFile', async (_, filePath: string) => {
   
   console.log('Reading file:', fullPath);
   const buffer = await fs.promises.readFile(fullPath);
-  return buffer.buffer;
+	// Node.js Buffer est un Uint8Array qui peut avoir un `byteOffset` != 0.
+	// Renvoyer directement `buffer.buffer` peut donc corrompre des données binaires.
+	return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 });

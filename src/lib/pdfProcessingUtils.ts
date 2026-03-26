@@ -4,6 +4,18 @@ import { getAllDossiers } from "./database";
 import { Rectangle } from "tesseract.js";
 import { appConfig } from "../config/appConfig";
 
+export type AnalyzeFileResult =
+	| {
+			ok: true;
+			detectedNumber: string;
+			confidence: number;
+			ids: string[];
+	  }
+	| {
+			ok: false;
+			error: string;
+	  };
+
 // Fonction utilitaire pour convertir une couleur hex en RGB
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
 	const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -25,7 +37,7 @@ export async function analyzeFile(
 	ocrPageNumber: number,
 	ocrRegion: Rectangle | undefined,
 	updateFile: (index: number, updates: Partial<PDFFile>) => void
-): Promise<void> {
+): Promise<AnalyzeFileResult> {
 	try {
 		// Marquer comme en cours d'OCR
 		updateFile(fileIndex, { status: "ocr", ocrProgress: 0 });
@@ -47,11 +59,21 @@ export async function analyzeFile(
 			detectedIds: result.ids,
 			ocrProgress: 100,
 		});
+
+		return {
+			ok: true,
+			detectedNumber,
+			confidence: result.confidence,
+			ids: result.ids,
+		};
 	} catch (error) {
+		const message = error instanceof Error ? error.message : "Erreur OCR";
 		updateFile(fileIndex, {
 			status: "error",
-			error: error instanceof Error ? error.message : "Erreur OCR",
+			error: message,
 		});
+
+		return { ok: false, error: message };
 	}
 }
 

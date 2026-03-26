@@ -2,6 +2,7 @@ import { Rectangle } from "tesseract.js";
 import { createCanvasFromRegion } from "./pdfRenderer";
 import { ocrWorkerManager } from "./ocrWorkerManager";
 import { getEnabledPatterns } from "../config/appConfig";
+import { PDF_RENDER_SCALE } from "../config/pdfRender";
 
 export interface OCRResult {
 	text: string;
@@ -34,7 +35,7 @@ function extractIds(text: string): string[] {
 
 export async function performOCRWithProgress(pdfFile: File, pageNumber: number, region: Rectangle | undefined, onProgress: (progress: number) => void): Promise<OCRResult> {
 	onProgress(0);
-	const imageData = await createCanvasFromRegion(pdfFile, pageNumber, region, 1.5);
+	const imageData = await createCanvasFromRegion(pdfFile, pageNumber, region, PDF_RENDER_SCALE);
 
 	const result = await ocrWorkerManager.addTask(imageData, onProgress);
 

@@ -1,3 +1,6 @@
+import Papa from "papaparse";
+import { z } from "zod";
+
 export type CSVParseResult = {
 	header?: string[];
 	rows: string[][];
@@ -33,24 +36,29 @@ export function autoDetectDelimiter(text: string, maxLines = 10): string {
 }
 
 export function parseCSV(text: string, delimiter = ",", hasHeader = true, maxPreviewRows = 20): CSVParseResult {
-	const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
-	if (lines.length === 0) return { rows: [] };
+	// PapaParse gère correctement les guillemets et les champs échappés (delimiter dans les champs, etc.)
+	const previewLines = maxPreviewRows + (hasHeader ? 1 : 0);
 
-	let header: string[] | undefined;
-	let start = 0;
+	const parsed = Papa.parse<string[]>(text, {
+		delimiter,
+		skipEmptyLines: true,
+		dynamicTyping: false,
+		preview: previewLines,
+	});
+
+	const allRows = (parsed.data || [])
+		.filter((r): r is string[] => Array.isArray(r))
+		.map((r: string[]) => r.map((c: unknown) => (c ?? "").toString().trim()));
+
+	if (allRows.length === 0) return { rows: [] };
 
 	if (hasHeader) {
-		header = splitLine(lines[0], delimiter).map((h) => h.trim());
-		start = 1;
+		const header = allRows[0];
+		const rows = allRows.slice(1, 1 + maxPreviewRows);
+		return { header, rows };
 	}
 
-	const rows: string[][] = [];
-	for (let i = start; i < Math.min(lines.length, start + maxPreviewRows); i++) {
-		const cols = splitLine(lines[i], delimiter).map((c) => c.trim());
-		rows.push(cols);
-	}
-
-	return { header, rows };
+	return { rows: allRows.slice(0, maxPreviewRows) };
 }
 
 export type CSVImportOptions = {
@@ -60,6 +68,16 @@ export type CSVImportOptions = {
 	valCol: number;
 	format?: "none" | "date";
 };
+
+export const csvImportOptionsSchema = z
+	.object({
+		delimiter: z.string().min(1),
+		hasHeader: z.boolean(),
+		idCol: z.number().int().nonnegative(),
+		valCol: z.number().int().nonnegative(),
+		format: z.enum(["none", "date"]).optional(),
+	})
+	.strict();
 
 export type CSVImportRecord = {
 	numero_dossier: string;

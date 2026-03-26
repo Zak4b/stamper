@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Dossier, getAllDossiers, addDossier as addDossierDB, deleteDossier as deleteDossierDB, importDossiers, exportToCSV } from "../../lib/database";
-import { autoDetectDelimiter, processCSVForImport, type CSVImportOptions } from "../../lib/csvHelper";
+import { autoDetectDelimiter, processCSVForImport, csvImportOptionsSchema, type CSVImportOptions } from "../../lib/csvHelper";
 import { Plus, Upload, Download, Trash2 } from "lucide-react";
 import { clearAllDossiers } from "../../lib/database";
 import { useToasts } from "../../hooks/useToasts";
@@ -124,7 +124,13 @@ const DatabaseManager: React.FC = () => {
 	async function handleImportConfirm(text: string, opts: CSVImportOptions) {
 		if (!text) return;
 
-		const result = processCSVForImport(text, opts);
+		const validated = csvImportOptionsSchema.safeParse(opts);
+		if (!validated.success) {
+			push({ type: "error", message: "Options CSV invalides: " + validated.error.message, delai: 6000 });
+			return;
+		}
+
+		const result = processCSVForImport(text, validated.data);
 
 		if (result.records.length === 0) {
 			push({ type: "warn", message: "Aucun enregistrement valide trouvé", delai: 5000 });

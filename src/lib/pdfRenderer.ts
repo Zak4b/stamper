@@ -1,6 +1,7 @@
 // Utilitaires pour le rendu et la gestion des PDFs
 import { Rectangle } from "tesseract.js";
 import { pdfjsLib, PDFPageProxy } from "./pdfLoader";
+import { PDF_RENDER_SCALE } from "../config/pdfRender";
 
 export interface PDFRenderOptions {
 	scale?: number;
@@ -58,7 +59,7 @@ export async function loadPDFDocument(pdfFile: File) {
  * Rend une page PDF sur un canvas avec gestion d'erreurs
  */
 export async function renderPDFPage(pdfFile: File, canvas: HTMLCanvasElement, pageNumber: number, options: PDFRenderOptions = {}): Promise<PDFPageInfo> {
-	const { scale = 1.5, maxRetries = 3, preserveRotation = false, useReorientation = false } = options;
+	const { scale = PDF_RENDER_SCALE, maxRetries = 3, preserveRotation = false, useReorientation = false } = options;
 
 	if (useReorientation) {
 		return await renderPDFPageWithReorientation(pdfFile, canvas, pageNumber, { scale, maxRetries, preserveRotation });
@@ -97,7 +98,7 @@ async function renderPDFPageWithReorientation(
 	pageNumber: number,
 	options: Omit<PDFRenderOptions, "useReorientation"> = {}
 ): Promise<PDFPageInfo> {
-	const { scale = 1.5, maxRetries = 3 } = options;
+	const { scale = PDF_RENDER_SCALE, maxRetries = 3 } = options;
 
 	try {
 		// Importer dynamiquement les fonctions de réorientation
@@ -150,7 +151,7 @@ async function renderPDFPageWithReorientation(
 /**
  * Crée un canvas temporaire avec une région spécifique du PDF
  */
-export async function createCanvasFromRegion(pdfFile: File, pageNumber: number, region?: Rectangle, scale: number = 1.5): Promise<string> {
+export async function createCanvasFromRegion(pdfFile: File, pageNumber: number, region?: Rectangle, scale: number = PDF_RENDER_SCALE): Promise<string> {
 	// Utiliser la réorientation pour être cohérent avec les previews
 	let canvas: HTMLCanvasElement;
 

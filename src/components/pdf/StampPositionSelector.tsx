@@ -3,6 +3,7 @@ import { StampPosition } from "../../lib/pdfStamper";
 import { usePDFRenderingContext } from "../../hooks/usePDFRenderingContext";
 import PDFRenderer from "./PDFRenderer";
 import { appConfig } from "../../config/appConfig";
+import { PDF_RENDER_SCALE } from "../../config/pdfRender";
 
 interface Props {
 	pdfFile: File;
@@ -17,7 +18,7 @@ const PositionMarker: React.FC<{ position: StampPosition | null }> = ({ position
 	if (!position || position.page !== currentPage || !canvasRef.current) return null;
 
 	const canvas = canvasRef.current;
-	const scale = 1.5; // Échelle par défaut du PDF renderer
+	const scale = PDF_RENDER_SCALE;
 
 	return (
 		<div

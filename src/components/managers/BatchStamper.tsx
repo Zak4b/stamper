@@ -14,11 +14,6 @@ const BatchStamper: React.FC = () => {
 	const handleRetry = async (file: PDFFile, fileIndex: number) => {
 		updatePDF(fileIndex, { status: "pending", error: undefined });
 		await analyzeFile(fileIndex, file.file, options.ocrPageNumber, options.ocrRegion, updatePDF);
-
-		const updatedFile = loadedPDFs[fileIndex];
-		if (updatedFile.status === "analyzed" && options.stampPosition) {
-			await stampFile(fileIndex, updatedFile, options.stampPosition, updatePDF);
-		}
 	};
 	function handleDownloadSingle(pdfFile: PDFFile) {
 		downloadSingle(pdfFile);
