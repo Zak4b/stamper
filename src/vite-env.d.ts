@@ -2,6 +2,27 @@
 
 // Types pour l'API Electron
 interface ElectronAPI {
+  updater: {
+    getState: () => Promise<{
+      stage: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error' | 'disabled';
+      message: string;
+      progress: number | null;
+      version: string | null;
+    }>;
+    checkForUpdates: () => Promise<{
+      stage: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error' | 'disabled';
+      message: string;
+      progress: number | null;
+      version: string | null;
+    }>;
+    installUpdate: () => Promise<boolean>;
+    onStatus: (callback: (state: {
+      stage: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error' | 'disabled';
+      message: string;
+      progress: number | null;
+      version: string | null;
+    }) => void) => () => void;
+  };
   getVersion: () => Promise<string>;
   getPath: (name: string) => Promise<string>;
   readFile: (filePath: string) => Promise<ArrayBuffer>;

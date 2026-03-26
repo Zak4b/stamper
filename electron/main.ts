@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
+import { autoUpdater } from 'electron-updater';
 import * as dbModule from './databaseService';
 import './polyfill';
 
@@ -12,6 +13,105 @@ const __dirname = path.dirname(__filename);
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
 let mainWindow: BrowserWindow | null = null;
+type UpdaterStage =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error'
+  | 'disabled';
+
+interface UpdaterState {
+  stage: UpdaterStage;
+  message: string;
+  progress: number | null;
+  version: string | null;
+}
+
+let updaterState: UpdaterState = {
+  stage: 'idle',
+  message: 'Aucune verification lancee',
+  progress: null,
+  version: null,
+};
+
+const setUpdaterState = (next: Partial<UpdaterState>) => {
+  updaterState = { ...updaterState, ...next };
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send('updater:status', updaterState);
+};
+
+const isPortableBuild = () => Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
+const isUpdaterEnabled = () =>
+  app.isPackaged &&
+  process.env.DISABLE_AUTO_UPDATER !== 'true' &&
+  !isPortableBuild();
+
+const setupAutoUpdater = () => {
+  if (!isUpdaterEnabled()) {
+    setUpdaterState({
+      stage: 'disabled',
+      message: app.isPackaged ? 'Auto-update desactive pour cette build' : 'Auto-update desactive en mode developpement',
+      progress: null,
+      version: null,
+    });
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    setUpdaterState({ stage: 'checking', message: 'Recherche de mises a jour...', progress: null, version: null });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    setUpdaterState({
+      stage: 'available',
+      message: `Mise a jour ${info.version} disponible`,
+      progress: null,
+      version: info.version,
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    setUpdaterState({
+      stage: 'not-available',
+      message: 'Aucune mise a jour disponible',
+      progress: null,
+      version: null,
+    });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    setUpdaterState({
+      stage: 'downloading',
+      message: `Telechargement: ${Math.round(progress.percent)}%`,
+      progress: progress.percent,
+      version: updaterState.version,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    setUpdaterState({
+      stage: 'downloaded',
+      message: `Mise a jour ${info.version} prete a installer`,
+      progress: 100,
+      version: info.version,
+    });
+  });
+
+  autoUpdater.on('error', (error) => {
+    setUpdaterState({
+      stage: 'error',
+      message: `Erreur update: ${error.message}`,
+      progress: null,
+      version: null,
+    });
+  });
+};
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -71,6 +171,10 @@ app.whenReady().then(() => {
   }
   
   createWindow();
+  setupAutoUpdater();
+  if (isUpdaterEnabled()) {
+    void autoUpdater.checkForUpdates();
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -190,6 +294,29 @@ ipcMain.handle('app:getPath', (_, name: string) => {
 
 ipcMain.handle('app:openExternal', (_, url: string) => {
   shell.openExternal(url);
+});
+
+ipcMain.handle('updater:getState', () => updaterState);
+
+ipcMain.handle('updater:checkForUpdates', async () => {
+  if (!isUpdaterEnabled()) {
+    setUpdaterState({
+      stage: 'disabled',
+      message: 'Auto-update non disponible pour cette build',
+      progress: null,
+      version: null,
+    });
+    return updaterState;
+  }
+  await autoUpdater.checkForUpdates();
+  return updaterState;
+});
+
+ipcMain.handle('updater:installUpdate', () => {
+  if (!isUpdaterEnabled()) return false;
+  if (updaterState.stage !== 'downloaded') return false;
+  autoUpdater.quitAndInstall();
+  return true;
 });
 
 // Lire un fichier et retourner un ArrayBuffer
