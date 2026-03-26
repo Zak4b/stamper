@@ -22,8 +22,8 @@ export async function renderPDFPageWithRetry(page: PDFPageProxy, canvas: HTMLCan
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
 			const context = canvas.getContext("2d")!;
-			// @ts-expect-error - PDF.js API types might not be fully compatible
 			await page.render({
+				canvas,
 				canvasContext: context,
 				viewport: viewport,
 			}).promise;
