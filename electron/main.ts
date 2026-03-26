@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
 import * as dbModule from './databaseService';
+import { checkForUpdatesOnStartup, configureUpdater, registerUpdaterIpcHandlers } from './updaterService';
 import './polyfill';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -71,6 +72,8 @@ app.whenReady().then(() => {
   }
   
   createWindow();
+  configureUpdater(() => mainWindow);
+  checkForUpdatesOnStartup();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -78,6 +81,8 @@ app.whenReady().then(() => {
     }
   });
 });
+
+registerUpdaterIpcHandlers();
 
 // Quitter l'app quand toutes les fenêtres sont fermées (sauf sur macOS)
 app.on('window-all-closed', () => {

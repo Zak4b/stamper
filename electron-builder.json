@@ -5,6 +5,14 @@
     "output": "release",
     "buildResources": "build"
   },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "Zak4b",
+      "repo": "stamper",
+      "releaseType": "release"
+    }
+  ],
   "files": [
     "dist/**/*",
     "dist-electron/**/*",
@@ -25,15 +33,18 @@
         "arch": ["x64"]
       }
     ],
-    "icon": "build/icon.ico",
-    "artifactName": "${productName}-${version}-${arch}.${ext}"
+    "icon": "build/icon.ico"
   },
   "nsis": {
+    "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "PDF Stamper"
+  },
+  "portable": {
+    "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
   },
   "mac": {
     "target": ["dmg", "zip"],

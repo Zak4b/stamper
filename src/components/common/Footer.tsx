@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Github, HelpCircle } from "lucide-react";
 import { GITHUB_URL } from "../../config/appConfig";
+import UpdateBadge from "./UpdateBadge";
 
 type FooterProps = {
 	onStartOnboarding?: () => void;
@@ -29,6 +30,11 @@ export default function Footer({ onStartOnboarding }: FooterProps) {
 		}
 	};
 
+	const handleVersionClick = async () => {
+		if (!import.meta.env.DEV) return;
+		await window.electron?.updater.checkForUpdates();
+	};
+
 	return (
 		<footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/95 backdrop-blur-sm">
 			<div className="mx-auto max-w-7xl px-4 py-2 text-sm text-gray-500 flex items-center justify-between gap-4">
@@ -40,8 +46,16 @@ export default function Footer({ onStartOnboarding }: FooterProps) {
 						title="Voir sur GitHub"
 					>
 						<Github className="w-4 h-4" />
-						<span className="font-medium">v{version}</span>
 					</a>
+					<button
+						type="button"
+						onClick={handleVersionClick}
+						className="font-medium hover:underline"
+						title="Relancer la verification des mises a jour (dev)"
+					>
+						v{version}
+					</button>
+					<UpdateBadge />
 				</div>
 				<button
 					type="button"
