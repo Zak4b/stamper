@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo } from "react";
 import { usePDFContext } from "../../hooks/usePDFContext";
 import { useOnboardingWizard } from "../../hooks/useOnboardingWizard";
 import { ONBOARDING_WIZARD_STEPS } from "../../config/onboardingWizardSteps";
 import { useDossierCount } from "../../hooks/useDossierCount";
 import { useOnboardingHighlightRect } from "../../hooks/useOnboardingHighlightRect";
-import { HelpCircle } from "lucide-react";
+export type OnboardingWizardPanelHandle = {
+	start: () => void;
+};
 
-const OnboardingWizardPanel: React.FC = () => {
+const OnboardingWizardPanel = forwardRef<OnboardingWizardPanelHandle>((_, ref) => {
 	const { currentStep, setCurrentStep, samplePDF, loadedPDFs, options } = usePDFContext();
 	const { isOpen, index, hydrated, dismiss, start, setIndex, complete } = useOnboardingWizard();
 
@@ -83,21 +85,16 @@ const OnboardingWizardPanel: React.FC = () => {
 		setCurrentStep(steps[next].appStep);
 	};
 
+	useImperativeHandle(
+		ref,
+		() => ({
+			start,
+		}),
+		[start]
+	);
+
 	return (
 		<>
-			{!isOpen && (
-				<button
-					type="button"
-					onClick={start}
-					className="fixed top-6 right-6 z-40 px-6 py-4 rounded-2xl bg-cyan-500 text-white ring-2 hover:bg-cyan-600 text-base font-semibold"
-				>
-					<div className="flex items-center gap-3">
-						<HelpCircle className="w-6 h-6" />
-						<span>Besoin d'aide ?</span>
-					</div>
-				</button>
-			)}
-
 			{isOpen && hydrated && (
 				<div className="fixed inset-0 z-50 pointer-events-none">
 			{/* If highlight is not ready yet, dim the UI to avoid a jarring experience */}
@@ -174,7 +171,7 @@ const OnboardingWizardPanel: React.FC = () => {
 			)}
 		</>
 	);
-};
+});
 
 export default OnboardingWizardPanel;
 
