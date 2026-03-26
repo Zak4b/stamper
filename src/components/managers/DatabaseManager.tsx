@@ -163,7 +163,7 @@ const DatabaseManager: React.FC = () => {
 						<button onClick={handleClearDatabase} className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
 							<span className="text-sm font-medium">Vider la base</span>
 						</button>
-						<label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+						<label data-onboarding-target="csv-import" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
 							<Upload className="w-4 h-4" />
 							<span className="text-sm font-medium">Importer CSV</span>
 							<input type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && importCSV(e.target.files[0])} />

@@ -18,11 +18,11 @@ const OCRStep: React.FC = () => {
 	const canProceed = Boolean(samplePDF);
 
 	return (
-		<>
+		<div data-onboarding-target="ocr-region">
 			<OCRRegionSelector pdfFile={samplePDF} onRegionSelected={setRegionOCR} onPageChanged={setPageOCR} currentRegion={options.ocrRegion} initialPage={options.ocrPageNumber} />
 
 			{canProceed && <FloatingActionButton onClick={handleNextStep} icon={<ArrowRight className="w-6 h-6" />} label="Étape suivante" variant="primary" />}
-		</>
+		</div>
 	);
 };
 

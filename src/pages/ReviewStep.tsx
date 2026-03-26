@@ -67,7 +67,7 @@ const ReviewStep: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber }
 	};
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-onboarding-target="review">
 			<Toolbar label="Traitement par lot" />
 			{errorFiles.length > 0 ? (
 				<div className="mb-8">

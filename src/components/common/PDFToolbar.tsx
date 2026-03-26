@@ -64,7 +64,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ label }) => {
 				<h2 className="text-xl font-semibold text-gray-900">{label}</h2>
 			</div>
 			<div className="flex gap-3">
-				<label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+				<label data-onboarding-target="load-pdfs" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
 					<FileText className="w-4 h-4" />
 					<span className="text-sm font-medium">Charger des PDFs</span>
 					<input ref={fileInputRef} type="file" multiple accept=".pdf" className="hidden" onChange={(e) => e.target.files && handleFilesSelected(e.target.files)} />
