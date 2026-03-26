@@ -67,7 +67,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 	return (
 		<div className="space-y-4">
 			{/* Configuration du CSV */}
-			<div className="border rounded-lg p-4 bg-gray-50">
+			<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
 				<h4 className="font-medium mb-3">Configuration du fichier CSV</h4>
 
 				<div className="flex gap-4 items-center mb-3">
@@ -75,7 +75,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 					<select
 						value={delimiter === detectedDelimiter ? "auto" : delimiter}
 						onChange={(e) => setDelimiter(e.target.value === "auto" ? detectedDelimiter : e.target.value)}
-						className="px-3 py-2 border rounded"
+						className="rounded border border-gray-300 bg-white px-3 py-2"
 					>
 						{DELIMS.map((d) => (
 							<option key={d.value} value={d.value}>
@@ -93,7 +93,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 
 				<div className="flex gap-4 items-center">
 					<label className="text-sm">Colonne numéro de dossier</label>
-					<select value={numeroCol} onChange={(e) => setNumeroCol(Number(e.target.value))} className="px-3 py-2 border rounded">
+					<select value={numeroCol} onChange={(e) => setNumeroCol(Number(e.target.value))} className="rounded border border-gray-300 bg-white px-3 py-2">
 						{columnOptions.map((o) => (
 							<option key={o.idx} value={o.idx}>
 								{o.label}
@@ -102,7 +102,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 					</select>
 
 					<label className="text-sm">Colonne valeur du tampon</label>
-					<select value={valeurCol} onChange={(e) => setValeurCol(Number(e.target.value))} className="px-3 py-2 border rounded">
+					<select value={valeurCol} onChange={(e) => setValeurCol(Number(e.target.value))} className="rounded border border-gray-300 bg-white px-3 py-2">
 						{columnOptions.map((o) => (
 							<option key={o.idx} value={o.idx}>
 								{o.label}
@@ -111,7 +111,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 					</select>
 
 					<label className="text-sm">Format</label>
-					<select value={format} onChange={(e) => setFormat(e.target.value as "none" | "date")} className="px-3 py-2 border rounded">
+					<select value={format} onChange={(e) => setFormat(e.target.value as "none" | "date")} className="rounded border border-gray-300 bg-white px-3 py-2">
 						<option value="none">Aucun</option>
 						<option value="date">Date (JJ/MM/AAAA)</option>
 					</select>
@@ -121,7 +121,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 			{/* Aperçu du tableau */}
 			<div>
 				<h4 className="font-medium mb-2">Aperçu des données</h4>
-				<div className="border rounded-lg overflow-hidden">
+				<div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
 					<div className="overflow-x-auto max-h-64 overflow-y-auto">
 						<table className="w-full text-sm">
 							<thead className="bg-gray-50 sticky top-0">
@@ -129,7 +129,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 									{Array.from({ length: maxCols }).map((_, i) => (
 										<th
 											key={i}
-											className={`px-3 py-2 text-left border-b font-medium ${i === numeroCol ? "bg-blue-100 text-blue-800" : i === valeurCol ? "bg-green-100 text-green-800" : ""}`}
+										className={`border-b border-gray-200 px-3 py-2 text-left font-medium ${i === numeroCol ? "bg-blue-100 text-blue-800" : i === valeurCol ? "bg-green-100 text-green-800" : ""}`}
 										>
 											{hasHeader && parsed.header?.[i] ? parsed.header[i] : `Colonne ${i + 1}`}
 											{i === numeroCol && <span className="text-xs block text-blue-600">Identifiant</span>}
@@ -142,7 +142,7 @@ export const CSVPreview: React.FC<CSVPreviewProps> = ({ rawText, detectedDelimit
 								{parsed.rows.slice(0, 20).map((row, ri) => (
 									<tr key={ri} className="odd:bg-white even:bg-gray-50">
 										{Array.from({ length: maxCols }).map((_, ci) => (
-											<td key={ci} className={`px-3 py-2 align-top border-b ${ci === numeroCol ? "bg-blue-50" : ci === valeurCol ? "bg-green-50" : ""}`}>
+											<td key={ci} className={`border-b border-gray-100 px-3 py-2 align-top ${ci === numeroCol ? "bg-blue-50" : ci === valeurCol ? "bg-green-50" : ""}`}>
 												<span className={`${ci === numeroCol ? "font-medium text-blue-900" : ci === valeurCol ? "font-medium text-green-900" : "text-gray-700"}`}>
 													{row[ci] ? (ci === valeurCol ? formatValue(row[ci], format) : row[ci]) : "—"}
 												</span>
