@@ -1,7 +1,15 @@
 /// <reference types="vite/client" />
+import type { UpdaterState } from "./types/updater";
 
 // Types pour l'API Electron
 interface ElectronAPI {
+  updater: {
+    getState: () => Promise<UpdaterState>;
+    checkForUpdates: () => Promise<UpdaterState>;
+    downloadUpdate: () => Promise<boolean>;
+    installUpdate: () => Promise<boolean>;
+    onStatus: (callback: (state: UpdaterState) => void) => () => void;
+  };
   getVersion: () => Promise<string>;
   getPath: (name: string) => Promise<string>;
   readFile: (filePath: string) => Promise<ArrayBuffer>;

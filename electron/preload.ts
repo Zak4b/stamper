@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { type UpdaterState } from '../src/types/updater';
 
 // Exposer les APIs Electron au renderer process de manière sécurisée
 contextBridge.exposeInMainWorld('electron', {
@@ -13,6 +14,18 @@ contextBridge.exposeInMainWorld('electron', {
   
   // API pour ouvrir une URL externe
   openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+
+  updater: {
+    getState: () => ipcRenderer.invoke('updater:getState') as Promise<UpdaterState>,
+    checkForUpdates: () => ipcRenderer.invoke('updater:checkForUpdates') as Promise<UpdaterState>,
+    downloadUpdate: () => ipcRenderer.invoke('updater:downloadUpdate') as Promise<boolean>,
+    installUpdate: () => ipcRenderer.invoke('updater:installUpdate') as Promise<boolean>,
+    onStatus: (callback: (state: UpdaterState) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, payload: UpdaterState) => callback(payload);
+      ipcRenderer.on('updater:status', listener);
+      return () => ipcRenderer.removeListener('updater:status', listener);
+    },
+  },
   
   // APIs de base de données
   db: {
@@ -31,28 +44,3 @@ contextBridge.exposeInMainWorld('electron', {
   // Vous pouvez ajouter d'autres APIs ici selon vos besoins
   platform: process.platform,
 });
-
-// Type pour TypeScript (à ajouter dans vite-env.d.ts)
-export interface ElectronAPI {
-  getVersion: () => Promise<string>;
-  getPath: (name: string) => Promise<string>;
-  readFile: (filePath: string) => Promise<ArrayBuffer>;
-  db: {
-    getAll: () => Promise<any[]>;
-    getByNumero: (numero: string) => Promise<any>;
-    insert: (numero: string, valeur: string) => Promise<any>;
-    update: (numero: string, valeur: string) => Promise<any>;
-    delete: (numero: string) => Promise<any>;
-    deleteAll: () => Promise<any>;
-    search: (query: string) => Promise<any[]>;
-    import: (dossiers: Array<{ numero_dossier: string; valeur_tampon: string }>) => Promise<any>;
-    getStats: () => Promise<{ totalDossiers: number; dbPath: string }>;
-  };
-  platform: NodeJS.Platform;
-}
-
-declare global {
-  interface Window {
-    electron: ElectronAPI;
-  }
-}
