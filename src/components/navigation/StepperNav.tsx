@@ -39,7 +39,7 @@ const STEPS: StepConfig[] = [
 		key: "position",
 		label: "Position",
 		isComplete: ({ stampPosition }) => stampPosition !== null,
-		isLocked: ({ samplePDF }) => !samplePDF,
+		isLocked: ({ samplePDF, ocrRegion }) => !samplePDF || ocrRegion === undefined,
 	},
 	{
 		key: "stamping",

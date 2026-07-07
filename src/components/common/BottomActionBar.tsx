@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { type Rectangle } from "tesseract.js";
 import { Github, HelpCircle, ChevronRight } from "lucide-react";
 import { GITHUB_URL } from "../../config/appConfig";
 import UpdateBadge from "./UpdateBadge";
@@ -15,12 +16,13 @@ const NEXT_STEP: Partial<Record<Step, { step: Step; label: string }>> = {
 interface BottomActionBarProps {
 	currentStep: Step;
 	samplePDF: File | null;
+	ocrRegion?: Rectangle;
 	stampPosition: boolean;
 	onStepChange: (step: Step) => void;
 	onStartOnboarding?: () => void;
 }
 
-export default function BottomActionBar({ currentStep, samplePDF, stampPosition, onStepChange, onStartOnboarding }: BottomActionBarProps) {
+export default function BottomActionBar({ currentStep, samplePDF, ocrRegion, stampPosition, onStepChange, onStartOnboarding }: BottomActionBarProps) {
 	const [version, setVersion] = useState<string>(() => (window.electron ? "" : "dev"));
 
 	useEffect(() => {
@@ -48,9 +50,9 @@ export default function BottomActionBar({ currentStep, samplePDF, stampPosition,
 	const next = NEXT_STEP[currentStep];
 
 	const isNextDisabled =
-		currentStep === "database" || currentStep === "ocr-region"
-			? !samplePDF
-			: !stampPosition;
+		currentStep === "database" ? !samplePDF
+		: currentStep === "ocr-region" ? !samplePDF || ocrRegion === undefined
+		: !stampPosition;
 
 	return (
 		<footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/95 backdrop-blur-sm">

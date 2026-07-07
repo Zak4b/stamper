@@ -45,6 +45,7 @@ function AppContent() {
 			<BottomActionBar
 				currentStep={currentStep}
 				samplePDF={samplePDF}
+				ocrRegion={options.ocrRegion}
 				stampPosition={!!options.stampPosition}
 				onStepChange={setCurrentStep}
 				onStartOnboarding={() => onboardingRef.current?.start()}

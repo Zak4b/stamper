@@ -20,7 +20,6 @@
 	"dependencies": {
 		"@types/better-sqlite3": "^7.6.13",
 		"better-sqlite3": "^12.6.2",
-		"daisyui": "^5.6.14",
 		"electron-updater": "^6.8.3",
 		"jszip": "^3.10.1",
 		"lucide-react": "^0.577.0",
@@ -42,6 +41,7 @@
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^5.1.2",
 		"autoprefixer": "^10.4.27",
+		"daisyui": "^5.6.14",
 		"electron": "^40.0.0",
 		"electron-builder": "^26.4.0",
 		"eslint": "^9.39.2",
