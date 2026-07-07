@@ -13,22 +13,32 @@
 
 ## Approche retenue
 
-**Stepper horizontal + Bottom Action Bar unifiée.**
+**Stepper horizontal + Bottom Action Bar unifiée — avec daisyUI.**
 
 Remplacer `NavigationSteps` par un stepper (cercles numérotés reliés par une ligne, checkmarks verts sur étapes complètes). Fusionner le `Footer` avec une barre d'action fixe en bas qui contient à gauche les éléments de footer existants, et à droite un bouton "Suivant" contextuel.
 
+**daisyUI** sera installé (`daisyui@latest`) et utilisé là où ses composants apportent de la valeur : `steps` pour le stepper, `btn` pour les boutons, `badge` pour l'`UpdateBadge`.
+
+**Installation :**
+```bash
+npm install daisyui
+```
+Puis dans `src/index.css` (Tailwind v4) :
+```css
+@plugin "daisyui";
+```
+
 ## Section 1 — StepperNav
 
-Composant `StepperNav` remplaçant `NavigationSteps`. Ligne horizontale avec 5 étapes reliées par des traits.
+Composant `StepperNav` remplaçant `NavigationSteps`. Utilise le composant daisyUI **`steps`** (`ul.steps`) — ligne horizontale avec 5 `li.step`, reliés par des traits gérés nativement.
 
-**Chaque étape affiche :**
-- Un cercle (32px) selon son état :
-  - **Active** : bleu rempli (`bg-blue-600`), numéro blanc
-  - **Complète** : vert (`bg-green-500`), icône checkmark blanche
-  - **Future accessible** : gris clair, numéro gris, cliquable
-  - **Verrouillée** : gris clair, numéro gris, `cursor-not-allowed`
-- Un label court sous le cercle
-- Un trait de connexion vers l'étape suivante : vert si l'étape source est complète, gris sinon
+**États daisyUI par étape :**
+- **Active** : `step step-primary` (bleu)
+- **Complète** : `step step-success` + `data-content="✓"` (vert avec checkmark)
+- **Future accessible** : `step` seul (gris), cliquable
+- **Verrouillée** : `step` seul (gris), `cursor-not-allowed`, `onClick` bloqué
+
+Le trait de connexion entre étapes est géré automatiquement par daisyUI : vert (`step-success`) si l'étape source est complète, gris sinon.
 
 **Logique de complétion par étape :**
 
@@ -58,10 +68,12 @@ Composant `BottomActionBar` remplaçant `Footer`. Barre fixe `fixed bottom-0`, m
 **Zone gauche :** reprise exacte du footer actuel (icône GitHub, version, `UpdateBadge`, bouton "Besoin d'aide ?").
 
 **Zone droite — bouton "Suivant" :**
-- Style : `bg-blue-600 text-white`, icône `ChevronRight`
+- Style daisyUI : `btn btn-primary`, icône `ChevronRight`
 - Libellé dynamique : `"Suivant → Zone OCR"`, `"Suivant → Position"`, `"Suivant → Traitement"`, `"Suivant → Revue"`
-- `disabled` + grisé si l'étape suivante est verrouillée
+- `disabled` + grisé automatiquement par daisyUI si l'étape suivante est verrouillée
 - Absent sur l'étape **Revue** (dernière étape)
+
+**Bouton "Besoin d'aide ?" :** migré vers `btn btn-sm btn-outline` daisyUI (remplace les classes Tailwind manuelles actuelles).
 
 **Logique disabled par étape courante :**
 
