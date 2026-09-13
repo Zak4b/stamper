@@ -1,17 +1,8 @@
-import React, { ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
+import React, { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
-import { usePDFRenderer } from "../../hooks/usePDFRenderer";
-import { useCanvasCoordinates } from "../../hooks/useCanvasCoordinates";
-import { PDFRenderingProvider, PDFRenderingContextType, type CanvasMetrics, EMPTY_CANVAS_METRICS } from "../../contexts/PDFRenderingContext";
+import { getPDFPageSizes, type PDFPageSize } from "../../lib/pdfRenderer";
+import PDFPageCanvas, { type PageMouseEventHandlers } from "./PDFPageCanvas";
 import PageNavigation from "../navigation/PageNavigation";
-
-interface MouseEventHandlers {
-	onClick?: (x: number, y: number) => void;
-	onMouseDown?: (x: number, y: number) => void;
-	onMouseMove?: (x: number, y: number) => void;
-	onMouseUp?: (x: number, y: number) => void;
-	onMouseLeave?: (x: number, y: number) => void;
-}
 
 interface Props {
 	pdfFile: File;
@@ -21,9 +12,18 @@ interface Props {
 	additionalControls?: ReactNode;
 	title?: ReactNode;
 	description?: string;
-	mouseEventHandlers?: MouseEventHandlers;
+	mouseEventHandlers?: PageMouseEventHandlers;
 	canvasClassName?: string;
 }
+
+/**
+ * Affiche toutes les pages du PDF les unes sous les autres, un canvas par page.
+ *
+ * Les documents traités font une dizaine de pages au maximum : toutes les pages
+ * sont rendues, sans virtualisation. `children` est rendu une fois par page,
+ * dans le contexte de cette page : un overlay se filtre lui-même via `pageIndex`.
+ */
+const NO_PAGES: PDFPageSize[] = [];
 
 const PDFRenderer: React.FC<Props> = ({
 	pdfFile,
@@ -34,69 +34,83 @@ const PDFRenderer: React.FC<Props> = ({
 	title,
 	description,
 	mouseEventHandlers,
-	canvasClassName = "cursor-crosshair",
+	canvasClassName,
 }) => {
-	const { currentPage, pageCount, canvasRef, goToPage } = usePDFRenderer(pdfFile, {
-		useReorientation: true,
-		initialPage,
-	});
-	const { getCanvasCoordinates } = useCanvasCoordinates();
-	// Le canvas est réduit à l'écran pour tenir dans la hauteur disponible : on mesure
-	// sa géométrie pour que les overlays (région OCR, tampon) suivent le redimensionnement.
-	const [canvasMetrics, setCanvasMetrics] = useState<CanvasMetrics>(EMPTY_CANVAS_METRICS);
+	// Les dimensions sont stockées avec le fichier auquel elles appartiennent :
+	// changer de PDF les invalide par dérivation, sans reset dans un effet.
+	const [loaded, setLoaded] = useState<{ file: File; sizes: PDFPageSize[] } | null>(null);
+	const pageSizes = loaded?.file === pdfFile ? loaded.sizes : NO_PAGES;
+	const [visiblePage, setVisiblePage] = useState(initialPage ?? 0);
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const pageElements = useRef(new Map<number, HTMLElement>());
+	const hasScrolledToInitial = useRef(false);
 
-	const measureCanvas = useCallback(() => {
-		const canvas = canvasRef.current;
-		if (!canvas) return;
-		setCanvasMetrics((prev) => {
-			const next: CanvasMetrics = {
-				width: canvas.width,
-				height: canvas.height,
-				offsetLeft: canvas.offsetLeft,
-				offsetTop: canvas.offsetTop,
-				offsetWidth: canvas.offsetWidth,
-				offsetHeight: canvas.offsetHeight,
-			};
-			const unchanged = (Object.keys(next) as (keyof CanvasMetrics)[]).every((key) => prev[key] === next[key]);
-			return unchanged ? prev : next;
-		});
-	}, [canvasRef]);
-
-	// Mesure après chaque rendu de page (la taille interne du canvas change avec la page).
-	useLayoutEffect(measureCanvas);
+	const registerElement = useCallback((pageIndex: number, element: HTMLElement | null) => {
+		if (element) pageElements.current.set(pageIndex, element);
+		else pageElements.current.delete(pageIndex);
+	}, []);
 
 	useEffect(() => {
-		const canvas = canvasRef.current;
-		if (!canvas) return;
-		const observer = new ResizeObserver(measureCanvas);
-		observer.observe(canvas);
-		return () => observer.disconnect();
-	}, [canvasRef, measureCanvas]);
+		let cancelled = false;
+		hasScrolledToInitial.current = false;
 
-	const handlePageChange = (page: number) => {
-		goToPage(page);
-		onPageChange?.(page);
-	};
+		getPDFPageSizes(pdfFile, { useReorientation: true })
+			.then((sizes) => {
+				if (!cancelled) setLoaded({ file: pdfFile, sizes });
+			})
+			.catch((error) => console.error("Erreur lors du chargement du PDF:", error));
 
-	// Fonctions pour convertir les événements souris en coordonnées x,y
-	const handleMouseEvent = (handler: ((x: number, y: number) => void) | undefined) => {
-		if (!handler) return undefined;
-		return (e: React.MouseEvent<HTMLCanvasElement>) => {
-			const canvas = canvasRef.current;
-			if (!canvas) return;
-			const { x, y } = getCanvasCoordinates(e, canvas);
-			handler(x, y);
+		return () => {
+			cancelled = true;
 		};
-	};
+	}, [pdfFile]);
 
-	// Contexte pour les enfants
-	const renderingContextValue: PDFRenderingContextType = {
-		canvasRef,
-		canvasMetrics,
-		currentPage,
-		pageCount,
-		getCanvasCoordinates: (e: React.MouseEvent<HTMLCanvasElement>) => getCanvasCoordinates(e, canvasRef.current!),
-	};
+	// Page « courante » = la plus visible dans le conteneur scrollable.
+	useEffect(() => {
+		const root = scrollRef.current;
+		if (!root || pageSizes.length === 0) return;
+
+		const ratios = new Map<number, number>();
+		const observer = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					const index = Number((entry.target as HTMLElement).dataset.pageIndex);
+					ratios.set(index, entry.intersectionRatio);
+				}
+
+				let best = -1;
+				let bestRatio = 0;
+				for (const [index, ratio] of ratios) {
+					if (ratio > bestRatio) {
+						bestRatio = ratio;
+						best = index;
+					}
+				}
+				if (best >= 0) setVisiblePage(best);
+			},
+			{ root, threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] }
+		);
+
+		pageElements.current.forEach((element) => observer.observe(element));
+		return () => observer.disconnect();
+	}, [pageSizes]);
+
+	useEffect(() => {
+		onPageChange?.(visiblePage);
+	}, [visiblePage, onPageChange]);
+
+	const scrollToPage = useCallback((page: number, behavior: ScrollBehavior = "smooth") => {
+		const element = pageElements.current.get(page);
+		if (!element) return;
+		element.scrollIntoView({ block: "start", behavior });
+	}, []);
+
+	// Ouvrir directement sur la page mémorisée (zone OCR déjà choisie, par exemple).
+	useEffect(() => {
+		if (hasScrolledToInitial.current || pageSizes.length === 0) return;
+		hasScrolledToInitial.current = true;
+		if (initialPage) scrollToPage(initialPage, "auto");
+	}, [pageSizes, initialPage, scrollToPage]);
 
 	return (
 		<div className="flex-1 min-h-0 flex flex-col bg-white rounded-lg shadow-sm border border-gray-200">
@@ -114,20 +128,25 @@ const PDFRenderer: React.FC<Props> = ({
 				)}
 				<div className="flex-1" />
 				{additionalControls}
-				<PageNavigation currentPage={currentPage} pageCount={pageCount} onPageChange={handlePageChange} />
+				<PageNavigation currentPage={visiblePage} pageCount={Math.max(pageSizes.length, 1)} onPageChange={scrollToPage} disabled={pageSizes.length === 0} />
 			</div>
 
-			<div className="relative flex-1 min-h-0 overflow-auto bg-gray-100 rounded-b-lg flex items-start justify-center p-2">
-				<canvas
-					ref={canvasRef}
-					className={`block max-w-full max-h-full object-contain shadow-sm ${canvasClassName}`}
-					onClick={handleMouseEvent(mouseEventHandlers?.onClick)}
-					onMouseDown={handleMouseEvent(mouseEventHandlers?.onMouseDown)}
-					onMouseMove={handleMouseEvent(mouseEventHandlers?.onMouseMove)}
-					onMouseUp={handleMouseEvent(mouseEventHandlers?.onMouseUp)}
-					onMouseLeave={handleMouseEvent(mouseEventHandlers?.onMouseLeave)}
-				/>
-				<PDFRenderingProvider value={renderingContextValue}>{children}</PDFRenderingProvider>
+			<div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto bg-gray-100 rounded-b-lg">
+				<div className="mx-auto w-full max-w-3xl flex flex-col gap-3 p-3">
+					{pageSizes.map((size, index) => (
+						<PDFPageCanvas
+							key={index}
+							pdfFile={pdfFile}
+							pageIndex={index}
+							size={size}
+							mouseEventHandlers={mouseEventHandlers}
+							canvasClassName={canvasClassName}
+							registerElement={registerElement}
+						>
+							{children}
+						</PDFPageCanvas>
+					))}
+				</div>
 			</div>
 		</div>
 	);

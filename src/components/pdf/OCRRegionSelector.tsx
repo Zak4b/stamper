@@ -1,83 +1,92 @@
-import React, { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import React, { useState, useEffect, useRef, type ReactNode } from "react";
 import { Rectangle } from "tesseract.js";
 import { Search } from "lucide-react";
-import { usePDFRenderingContext } from "../../hooks/usePDFRenderingContext";
+import { usePDFPageContext } from "../../hooks/usePDFPageContext";
 import PDFRenderer from "./PDFRenderer";
 
 interface Props {
 	pdfFile: File;
 	onRegionSelected: (region: Rectangle | undefined) => void;
 	onPageChanged?: (pageNumber: number) => void;
-	currentRegion?: Rectangle; // Région actuelle depuis le context
-	initialPage?: number; // Page initiale depuis le context
+	currentRegion?: Rectangle; // Région actuelle depuis le store
+	initialPage?: number; // Page initiale depuis le store
 	actions?: ReactNode; // Actions additionnelles affichées dans la barre d'outils
 }
 
-// Composant pour afficher la région sélectionnée
-const RegionOverlay: React.FC<{ region: Rectangle | null }> = ({ region }) => {
-	const { canvasMetrics } = usePDFRenderingContext();
+/** Une région est toujours rattachée à la page sur laquelle elle a été tracée. */
+interface PagedRegion {
+	region: Rectangle;
+	page: number;
+}
 
-	if (!region || !canvasMetrics.width || !canvasMetrics.height) return null;
+// Composant pour afficher la région sélectionnée
+const RegionOverlay: React.FC<{ selection: PagedRegion | null }> = ({ selection }) => {
+	const { pageIndex, width, height } = usePDFPageContext();
+
+	if (!selection || selection.page !== pageIndex) return null;
+
+	const { region } = selection;
 
 	return (
 		<div
 			className="absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none"
 			style={{
-				left: `${canvasMetrics.offsetLeft + (region.left / canvasMetrics.width) * canvasMetrics.offsetWidth}px`,
-				top: `${canvasMetrics.offsetTop + (region.top / canvasMetrics.height) * canvasMetrics.offsetHeight}px`,
-				width: `${(region.width / canvasMetrics.width) * canvasMetrics.offsetWidth}px`,
-				height: `${(region.height / canvasMetrics.height) * canvasMetrics.offsetHeight}px`,
+				left: `${(region.left / width) * 100}%`,
+				top: `${(region.top / height) * 100}%`,
+				width: `${(region.width / width) * 100}%`,
+				height: `${(region.height / height) * 100}%`,
 			}}
 		/>
 	);
 };
 
 // Hook personnalisé pour la logique de sélection de région
-function useRegionSelection(
-	initialRegion: Rectangle | null | undefined,
-	onSelectionCommitted?: (region: Rectangle | undefined) => void
-) {
+function useRegionSelection(initialSelection: PagedRegion | null, onSelectionCommitted: (selection: PagedRegion) => void) {
 	const [isSelecting, setIsSelecting] = useState(false);
-	const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
-	const [region, setRegion] = useState<Rectangle | null>(initialRegion || null);
-	const regionRef = useRef<Rectangle | null>(initialRegion || null);
+	const [startPos, setStartPos] = useState<{ x: number; y: number; page: number } | null>(null);
+	const [selection, setSelection] = useState<PagedRegion | null>(initialSelection);
+	const selectionRef = useRef<PagedRegion | null>(initialSelection);
 
-	// Keep a ref for commit on mouseUp (avoid depending on `region` state in handlers)
+	// Keep a ref for commit on mouseUp (avoid depending on `selection` state in handlers)
 	useEffect(() => {
-		regionRef.current = region;
-	}, [region]);
+		selectionRef.current = selection;
+	}, [selection]);
 
-	const handleMouseDown = (x: number, y: number) => {
+	const handleMouseDown = (x: number, y: number, page: number) => {
 		setIsSelecting(true);
-		setStartPos({ x, y });
-		setRegion(null);
+		setStartPos({ x, y, page });
+		setSelection(null);
 	};
 
-	const handleMouseMove = (x: number, y: number) => {
-		if (!isSelecting || !startPos) return;
+	const handleMouseMove = (x: number, y: number, page: number) => {
+		// Un glissement qui déborde sur une autre page est ignoré : la zone reste
+		// contenue dans la page où elle a commencé.
+		if (!isSelecting || !startPos || page !== startPos.page) return;
 
-		const left = Math.min(startPos.x, x);
-		const top = Math.min(startPos.y, y);
-		const width = Math.abs(x - startPos.x);
-		const height = Math.abs(y - startPos.y);
-
-		setRegion({ left, top, width, height });
+		setSelection({
+			page: startPos.page,
+			region: {
+				left: Math.min(startPos.x, x),
+				top: Math.min(startPos.y, y),
+				width: Math.abs(x - startPos.x),
+				height: Math.abs(y - startPos.y),
+			},
+		});
 	};
 
 	const handleMouseUp = () => {
+		if (!isSelecting) return;
 		setIsSelecting(false);
 
-		const r = regionRef.current;
-		if (onSelectionCommitted) {
-			// Ne notifie que si la zone est suffisamment grande
-			if (r && r.width > 10 && r.height > 10) onSelectionCommitted(r);
-		}
+		const current = selectionRef.current;
+		// Ne notifie que si la zone est suffisamment grande
+		if (current && current.region.width > 10 && current.region.height > 10) onSelectionCommitted(current);
 	};
 
 	return {
 		isSelecting,
-		region,
-		setRegion,
+		selection,
+		setSelection,
 		mouseEventHandlers: {
 			onMouseDown: handleMouseDown,
 			onMouseMove: handleMouseMove,
@@ -88,53 +97,41 @@ function useRegionSelection(
 }
 
 const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage, actions }) => {
-	const [currentPage, setCurrentPage] = useState(initialPage || 0);
-	const isInitialMount = useRef(true);
-	const { isSelecting, region, setRegion, mouseEventHandlers } = useRegionSelection(currentRegion, (r) => {
-		onRegionSelected(r);
-	});
+	// Page actuellement à l'écran : sert uniquement à « Page complète », qui n'a
+	// pas de région pour porter sa page.
+	const [visiblePage, setVisiblePage] = useState(initialPage ?? 0);
 
-	// Synchroniser avec la région du context
-	useEffect(() => {
-		// Pendant le drag de la souris, on laisse la région locale piloter l'affichage.
-		// Sinon on peut créer une boucle de re-render (contexte -> props -> setRegion -> effet).
-		if (isSelecting) return;
-
-		setRegion((prev) => {
-			const next = currentRegion || null;
-			if (prev === next) return prev;
-			if (!prev || !next) return next;
-			if (prev.left === next.left && prev.top === next.top && prev.width === next.width && prev.height === next.height) return prev;
-			return next;
-		});
-	}, [currentRegion, isSelecting, setRegion]);
-
-	// Stable callback pour éviter les re-renders
-	const stableOnPageChanged = useCallback(
-		(page: number) => {
-			onPageChanged?.(page);
-		},
-		[onPageChanged]
+	const { isSelecting, selection, setSelection, mouseEventHandlers } = useRegionSelection(
+		currentRegion ? { region: currentRegion, page: initialPage ?? 0 } : null,
+		(committed) => {
+			onRegionSelected(committed.region);
+			onPageChanged?.(committed.page);
+		}
 	);
 
-	// Appeler onPageChanged seulement après la première initialisation
+	// Synchroniser avec la région du store
 	useEffect(() => {
-		if (isInitialMount.current) {
-			isInitialMount.current = false;
-			return;
-		}
-		stableOnPageChanged(currentPage);
-	}, [currentPage, stableOnPageChanged]);
+		// Pendant le drag de la souris, on laisse la sélection locale piloter
+		// l'affichage. Sinon on peut créer une boucle de re-render
+		// (store -> props -> setSelection -> effet).
+		if (isSelecting) return;
 
-	// Note: on ne notifie le parent qu'au mouseUp via `useRegionSelection`
+		setSelection((prev) => {
+			if (!currentRegion) return prev === null ? prev : null;
+
+			const page = prev?.page ?? initialPage ?? 0;
+			const p = prev?.region;
+			if (p && p.left === currentRegion.left && p.top === currentRegion.top && p.width === currentRegion.width && p.height === currentRegion.height) {
+				return prev;
+			}
+			return { region: currentRegion, page };
+		});
+	}, [currentRegion, initialPage, isSelecting, setSelection]);
 
 	function handleUseFullPage() {
-		setRegion(null);
+		setSelection(null);
 		onRegionSelected(undefined);
-	}
-
-	function handlePageChange(page: number) {
-		setCurrentPage(page);
+		onPageChanged?.(visiblePage);
 	}
 
 	const additionalControls = (
@@ -150,7 +147,7 @@ const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageC
 		<PDFRenderer
 			pdfFile={pdfFile}
 			initialPage={initialPage}
-			onPageChange={handlePageChange}
+			onPageChange={setVisiblePage}
 			additionalControls={additionalControls}
 			mouseEventHandlers={mouseEventHandlers}
 			title={
@@ -161,7 +158,7 @@ const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageC
 			}
 			description="Sélectionnez la zone où se trouve le numéro de dossier en cliquant et glissant sur le PDF, ou utilisez la page complète pour une recherche automatique."
 		>
-			<RegionOverlay region={region} />
+			<RegionOverlay selection={selection} />
 		</PDFRenderer>
 	);
 };

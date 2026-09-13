@@ -45,6 +45,29 @@ export async function renderPDFPageWithRetry(page: PDFPageProxy, canvas: HTMLCan
 	}
 }
 
+export interface PDFPageSize {
+	width: number;
+	height: number;
+}
+
+/**
+ * Dimensions de rendu de chaque page, lues une fois pour dimensionner les
+ * conteneurs avant que les canvas ne soient peints (évite tout saut de layout).
+ */
+export async function getPDFPageSizes(pdfFile: File, options: PDFRenderOptions = {}): Promise<PDFPageSize[]> {
+	const { scale = PDF_RENDER_SCALE, preserveRotation = false, useReorientation = false } = options;
+
+	const { pdf } = await getPreparedPDF(pdfFile, useReorientation);
+
+	const sizes: PDFPageSize[] = [];
+	for (let i = 1; i <= pdf.numPages; i++) {
+		const page = await pdf.getPage(i);
+		const viewport = page.getViewport({ scale, rotation: preserveRotation ? 0 : undefined });
+		sizes.push({ width: viewport.width, height: viewport.height });
+	}
+	return sizes;
+}
+
 /**
  * Dessine une page déjà ouverte sur un canvas, en le dimensionnant au viewport.
  */
