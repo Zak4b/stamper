@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { usePDFContext } from "../hooks/usePDFContext";
+import { usePDFStore } from "../stores/usePDFStore";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { type PDFFile } from "../types/PDFFile";
 import { downloadSingle } from "../lib/downloadUtils";
@@ -17,7 +17,8 @@ interface Props {
 }
 
 const ReviewStep: React.FC<Props> = ({ stampPosition, ocrRegion, ocrPageNumber }) => {
-	const { loadedPDFs, updatePDF } = usePDFContext();
+	const loadedPDFs = usePDFStore((s) => s.loadedPDFs);
+	const updatePDF = usePDFStore((s) => s.updatePDF);
 	const [viewerState, setViewerState] = useState<{ isOpen: boolean; pdfFile?: PDFFile; index?: number }>({
 		isOpen: false,
 	});

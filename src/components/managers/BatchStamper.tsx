@@ -2,18 +2,22 @@ import React, { useEffect, useCallback } from "react";
 import { FileText } from "lucide-react";
 import ProcessingStats from "../progress/ProcessingStats";
 import PDFRow from "../pdf/PDFRow";
-import { usePDFContext } from "../../hooks/usePDFContext";
+import { usePDFStore } from "../../stores/usePDFStore";
 import { type PDFFile } from "../../types/PDFFile";
 import { downloadSingle } from "../../lib/downloadUtils";
 import { analyzeFile, stampFile } from "../../lib/pdfProcessingUtils";
 import Toolbar from "../common/PDFToolbar";
 
 const BatchStamper: React.FC = () => {
-	const { loadedPDFs, updatePDF, options } = usePDFContext();
+	const loadedPDFs = usePDFStore((s) => s.loadedPDFs);
+	const updatePDF = usePDFStore((s) => s.updatePDF);
+	const ocrRegion = usePDFStore((s) => s.options.ocrRegion);
+	const ocrPageNumber = usePDFStore((s) => s.options.ocrPageNumber);
+	const stampPosition = usePDFStore((s) => s.options.stampPosition);
 
 	const handleRetry = async (file: PDFFile, fileIndex: number) => {
 		updatePDF(fileIndex, { status: "pending", error: undefined });
-		await analyzeFile(fileIndex, file.file, options.ocrPageNumber, options.ocrRegion, updatePDF);
+		await analyzeFile(fileIndex, file.file, ocrPageNumber, ocrRegion, updatePDF);
 	};
 	function handleDownloadSingle(pdfFile: PDFFile) {
 		downloadSingle(pdfFile);
@@ -21,10 +25,10 @@ const BatchStamper: React.FC = () => {
 
 	const processPDF = useCallback(
 		async (file: PDFFile, fileIndex: number) => {
-			if (file.status !== "analyzed" || !options.stampPosition) return;
-			await stampFile(fileIndex, file, options.stampPosition, updatePDF);
+			if (file.status !== "analyzed" || !stampPosition) return;
+			await stampFile(fileIndex, file, stampPosition, updatePDF);
 		},
-		[options.stampPosition, updatePDF]
+		[stampPosition, updatePDF]
 	);
 
 	// Surveiller les fichiers analyzed et les tamponner automatiquement

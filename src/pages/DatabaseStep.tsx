@@ -1,10 +1,10 @@
 import React from "react";
 import { FileText } from "lucide-react";
 import DatabaseManager from "../components/managers/DatabaseManager";
-import { usePDFContext } from "../hooks/usePDFContext";
+import { usePDFStore } from "../stores/usePDFStore";
 
 const DatabaseStep: React.FC = () => {
-	const { setSamplePDF } = usePDFContext();
+	const setSamplePDF = usePDFStore((s) => s.setSamplePDF);
 
 	return (
 		<div className="flex-1 min-h-0 flex flex-col gap-3" data-onboarding-target="database">

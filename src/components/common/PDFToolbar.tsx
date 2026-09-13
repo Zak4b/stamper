@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { FileText, Trash2, Download } from "lucide-react";
-import { usePDFContext } from "../../hooks/usePDFContext";
+import { usePDFStore } from "../../stores/usePDFStore";
 import { downloadAll } from "../../lib/downloadUtils";
 import { useConfirmModal } from "../../hooks/useConfirmModal";
 import { type PDFFile } from "../../types/PDFFile";
@@ -12,7 +12,12 @@ interface ToolbarProps {
 
 const Toolbar: React.FC<ToolbarProps> = ({ label }) => {
 	const { confirm, modalComponent } = useConfirmModal();
-	const { loadedPDFs, clearPDFs, addPDFs, updatePDF, options } = usePDFContext();
+	const loadedPDFs = usePDFStore((s) => s.loadedPDFs);
+	const clearPDFs = usePDFStore((s) => s.clearPDFs);
+	const addPDFs = usePDFStore((s) => s.addPDFs);
+	const updatePDF = usePDFStore((s) => s.updatePDF);
+	const ocrRegion = usePDFStore((s) => s.options.ocrRegion);
+	const ocrPageNumber = usePDFStore((s) => s.options.ocrPageNumber);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	async function handleFilesSelected(files: FileList) {
@@ -24,13 +29,14 @@ const Toolbar: React.FC<ToolbarProps> = ({ label }) => {
 				ocrProgress: 0,
 			}));
 
+		// Index de base lu au moment de l'ajout : évite un décalage si deux
+		// sélections de fichiers s'enchaînent avant un re-render.
+		const baseIndex = usePDFStore.getState().loadedPDFs.length;
 		addPDFs(newFiles);
 
 		// Analyser chaque nouveau fichier avec OCR
-		for (let i = loadedPDFs.length; i < loadedPDFs.length + newFiles.length; i++) {
-			const fileIndex = i;
-			const file = newFiles[i - loadedPDFs.length].file;
-			await analyzeFile(fileIndex, file, options.ocrPageNumber, options.ocrRegion, updatePDF);
+		for (let i = 0; i < newFiles.length; i++) {
+			await analyzeFile(baseIndex + i, newFiles[i].file, ocrPageNumber, ocrRegion, updatePDF);
 		}
 	}
 

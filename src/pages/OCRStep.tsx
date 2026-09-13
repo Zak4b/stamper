@@ -1,10 +1,15 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
 import OCRRegionSelector from "../components/pdf/OCRRegionSelector";
-import { usePDFContext } from "../hooks/usePDFContext";
+import { usePDFStore } from "../stores/usePDFStore";
 
 const OCRStep: React.FC = () => {
-	const { samplePDF, options, setRegionOCR, setPageOCR, setCurrentStep } = usePDFContext();
+	const samplePDF = usePDFStore((s) => s.samplePDF);
+	const ocrRegion = usePDFStore((s) => s.options.ocrRegion);
+	const ocrPageNumber = usePDFStore((s) => s.options.ocrPageNumber);
+	const setRegionOCR = usePDFStore((s) => s.setRegionOCR);
+	const setPageOCR = usePDFStore((s) => s.setPageOCR);
+	const setCurrentStep = usePDFStore((s) => s.setCurrentStep);
 
 	if (!samplePDF) {
 		return <div className="text-gray-500">Aucun PDF chargé</div>;
@@ -16,8 +21,8 @@ const OCRStep: React.FC = () => {
 				pdfFile={samplePDF}
 				onRegionSelected={setRegionOCR}
 				onPageChanged={setPageOCR}
-				currentRegion={options.ocrRegion}
-				initialPage={options.ocrPageNumber}
+				currentRegion={ocrRegion}
+				initialPage={ocrPageNumber}
 				actions={
 					<button
 						onClick={() => setCurrentStep("position")}

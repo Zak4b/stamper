@@ -1,6 +1,7 @@
 // Utilitaires pour le rendu et la gestion des PDFs
 import { Rectangle } from "tesseract.js";
 import { pdfjsLib, PDFPageProxy } from "./pdfLoader";
+import { getPreparedPDF, preparePDFDocument } from "./pdfDocumentCache";
 import { PDF_RENDER_SCALE } from "../config/pdfRender";
 
 export interface PDFRenderOptions {
@@ -45,29 +46,9 @@ export async function renderPDFPageWithRetry(page: PDFPageProxy, canvas: HTMLCan
 }
 
 /**
- * Charge un PDF et retourne les informations de base
+ * Dessine une page déjà ouverte sur un canvas, en le dimensionnant au viewport.
  */
-export async function loadPDFDocument(pdfFile: File) {
-	const arrayBuffer = await pdfFile.arrayBuffer();
-	const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-	const pdf = await loadingTask.promise;
-
-	return pdf;
-}
-
-/**
- * Rend une page PDF sur un canvas avec gestion d'erreurs
- */
-export async function renderPDFPage(pdfFile: File, canvas: HTMLCanvasElement, pageNumber: number, options: PDFRenderOptions = {}): Promise<PDFPageInfo> {
-	const { scale = PDF_RENDER_SCALE, maxRetries = 3, preserveRotation = false, useReorientation = false } = options;
-
-	if (useReorientation) {
-		return await renderPDFPageWithReorientation(pdfFile, canvas, pageNumber, { scale, maxRetries, preserveRotation });
-	}
-
-	const pdf = await loadPDFDocument(pdfFile);
-	const page = await pdf.getPage(pageNumber + 1);
-
+async function drawPage(page: PDFPageProxy, canvas: HTMLCanvasElement, scale: number, preserveRotation: boolean, maxRetries: number): Promise<void> {
 	const viewport = page.getViewport({
 		scale,
 		rotation: preserveRotation ? 0 : undefined, // 0 = pas de correction automatique
@@ -82,6 +63,29 @@ export async function renderPDFPage(pdfFile: File, canvas: HTMLCanvasElement, pa
 	canvas.width = viewport.width;
 
 	await renderPDFPageWithRetry(page, canvas, viewport, maxRetries);
+}
+
+/**
+ * Rend une page PDF sur un canvas avec gestion d'erreurs.
+ *
+ * Le document est mis en cache par identité de `File` : changer de page ou
+ * d'étape ne relit ni ne reparse le fichier.
+ */
+export async function renderPDFPage(pdfFile: File, canvas: HTMLCanvasElement, pageNumber: number, options: PDFRenderOptions = {}): Promise<PDFPageInfo> {
+	const { scale = PDF_RENDER_SCALE, maxRetries = 3, preserveRotation = false, useReorientation = false } = options;
+
+	let pdf;
+	try {
+		pdf = (await getPreparedPDF(pdfFile, useReorientation)).pdf;
+	} catch (error) {
+		if (!useReorientation) throw error;
+		// Fallback vers le rendu standard si la réorientation échoue
+		console.error("Erreur lors du rendu avec réorientation, fallback vers rendu standard:", error);
+		pdf = (await getPreparedPDF(pdfFile, false)).pdf;
+	}
+
+	const page = await pdf.getPage(pageNumber + 1);
+	await drawPage(page, canvas, scale, preserveRotation, maxRetries);
 
 	return {
 		pageCount: pdf.numPages,
@@ -90,117 +94,26 @@ export async function renderPDFPage(pdfFile: File, canvas: HTMLCanvasElement, pa
 }
 
 /**
- * Rend une page PDF avec réorientation automatique des anomalies
- */
-async function renderPDFPageWithReorientation(
-	pdfFile: File,
-	canvas: HTMLCanvasElement,
-	pageNumber: number,
-	options: Omit<PDFRenderOptions, "useReorientation"> = {}
-): Promise<PDFPageInfo> {
-	const { scale = PDF_RENDER_SCALE, maxRetries = 3 } = options;
-
-	try {
-		// Importer dynamiquement les fonctions de réorientation
-		const { needsReorientation, reorientPDF } = await import("./pdfReorientation");
-
-		const arrayBuffer = await pdfFile.arrayBuffer();
-		const pdfBytes = new Uint8Array(arrayBuffer);
-
-		// Vérifier si le PDF a besoin d'être réorienté
-		const needsReorient = await needsReorientation(pdfBytes);
-
-		let finalPdfBytes = pdfBytes;
-
-		if (needsReorient) {
-			console.log("Réorientation nécessaire pour le preview - création d'un PDF temporaire...");
-			const reorientedBytes = await reorientPDF(pdfBytes);
-			finalPdfBytes = new Uint8Array(reorientedBytes);
-		}
-
-		// Créer un fichier temporaire avec les bytes réorientés
-		const reorientedFile = new File([finalPdfBytes], pdfFile.name, { type: "application/pdf" });
-
-		// Utiliser la fonction de rendu standard sur le PDF réorienté
-		const pdf = await loadPDFDocument(reorientedFile);
-		const page = await pdf.getPage(pageNumber + 1);
-
-		const viewport = page.getViewport({ scale });
-
-		const context = canvas.getContext("2d");
-		if (!context) {
-			throw new Error("Cannot get canvas context");
-		}
-
-		canvas.height = viewport.height;
-		canvas.width = viewport.width;
-
-		await renderPDFPageWithRetry(page, canvas, viewport, maxRetries);
-
-		return {
-			pageCount: pdf.numPages,
-			currentPage: pageNumber,
-		};
-	} catch (error) {
-		console.error("Erreur lors du rendu avec réorientation, fallback vers rendu standard:", error);
-		// Fallback vers le rendu standard en cas d'erreur
-		return await renderPDFPage(pdfFile, canvas, pageNumber, { ...options, useReorientation: false });
-	}
-}
-
-/**
  * Crée un canvas temporaire avec une région spécifique du PDF
  */
 export async function createCanvasFromRegion(pdfFile: File, pageNumber: number, region?: Rectangle, scale: number = PDF_RENDER_SCALE): Promise<string> {
-	// Utiliser la réorientation pour être cohérent avec les previews
-	let canvas: HTMLCanvasElement;
-
+	// Fichier ponctuel (un PDF du lot) : on prépare hors cache et on libère
+	// immédiatement, sinon chaque fichier OCRisé garderait un document pdf.js ouvert.
+	let prepared;
 	try {
-		const { needsReorientation, reorientPDF } = await import("./pdfReorientation");
-
-		const arrayBuffer = await pdfFile.arrayBuffer();
-		const pdfBytes = new Uint8Array(arrayBuffer);
-
-		const needsReorient = await needsReorientation(pdfBytes);
-
-		let finalFile = pdfFile;
-
-		if (needsReorient) {
-			const reorientedBytes = await reorientPDF(pdfBytes);
-			finalFile = new File([new Uint8Array(reorientedBytes)], pdfFile.name, { type: "application/pdf" });
-		}
-
-		const pdf = await loadPDFDocument(finalFile);
-		const page = await pdf.getPage(pageNumber + 1);
-		const viewport = page.getViewport({ scale });
-
-		canvas = document.createElement("canvas");
-		const context = canvas.getContext("2d");
-		if (!context) {
-			throw new Error("Cannot create canvas context");
-		}
-
-		canvas.height = viewport.height;
-		canvas.width = viewport.width;
-
-		await renderPDFPageWithRetry(page, canvas, viewport);
+		// Utiliser la réorientation pour être cohérent avec les previews
+		prepared = await preparePDFDocument(pdfFile, true);
 	} catch (error) {
 		console.error("Erreur lors de la réorientation pour OCR, fallback vers rendu standard:", error);
-		// Fallback vers la méthode standard
-		const pdf = await loadPDFDocument(pdfFile);
-		const page = await pdf.getPage(pageNumber + 1);
-		const viewport = page.getViewport({ scale });
+		prepared = await preparePDFDocument(pdfFile, false);
+	}
 
-		canvas = document.createElement("canvas");
-		const context = canvas.getContext("2d");
-		if (!context) {
-			throw new Error("Cannot create canvas context");
-		}
-
-		canvas.height = viewport.height;
-		canvas.width = viewport.width;
-
-		await renderPDFPageWithRetry(page, canvas, viewport);
+	const canvas = document.createElement("canvas");
+	try {
+		const page = await prepared.pdf.getPage(pageNumber + 1);
+		await drawPage(page, canvas, scale, false, 3);
+	} finally {
+		void prepared.pdf.destroy().catch(() => undefined);
 	}
 
 	let imageData: string;

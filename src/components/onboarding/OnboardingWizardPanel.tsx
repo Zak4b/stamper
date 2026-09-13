@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo } from "react";
-import { usePDFContext } from "../../hooks/usePDFContext";
+import { usePDFStore } from "../../stores/usePDFStore";
 import { useOnboardingWizard } from "../../hooks/useOnboardingWizard";
 import { ONBOARDING_WIZARD_STEPS } from "../../config/onboardingWizardSteps";
 import { useDossierCount } from "../../hooks/useDossierCount";
@@ -9,7 +9,12 @@ export type OnboardingWizardPanelHandle = {
 };
 
 const OnboardingWizardPanel = forwardRef<OnboardingWizardPanelHandle>((_, ref) => {
-	const { currentStep, setCurrentStep, samplePDF, loadedPDFs, options } = usePDFContext();
+	const currentStep = usePDFStore((s) => s.currentStep);
+	const setCurrentStep = usePDFStore((s) => s.setCurrentStep);
+	const samplePDF = usePDFStore((s) => s.samplePDF);
+	const loadedPDFsCount = usePDFStore((s) => s.loadedPDFs.length);
+	const ocrRegion = usePDFStore((s) => s.options.ocrRegion);
+	const stampPosition = usePDFStore((s) => s.options.stampPosition);
 	const { isOpen, index, hydrated, dismiss, start, setIndex, complete } = useOnboardingWizard();
 
 	const steps = ONBOARDING_WIZARD_STEPS;
@@ -56,17 +61,17 @@ const OnboardingWizardPanel = forwardRef<OnboardingWizardPanelHandle>((_, ref) =
 			case 1:
 				return Boolean(samplePDF);
 			case 2:
-				return Boolean(samplePDF && options.ocrRegion);
+				return Boolean(samplePDF && ocrRegion);
 			case 3:
-				return Boolean(samplePDF && options.stampPosition);
+				return Boolean(samplePDF && stampPosition);
 			case 4:
-				return Boolean(options.stampPosition && loadedPDFs.length > 0);
+				return Boolean(stampPosition && loadedPDFsCount > 0);
 			case 5:
 				return true;
 			default:
 				return false;
 		}
-	}, [index, dossierCount, loadedPDFs.length, options.ocrRegion, options.stampPosition, samplePDF]);
+	}, [index, dossierCount, loadedPDFsCount, ocrRegion, stampPosition, samplePDF]);
 
 	const currentHighlightTarget = steps[index]?.highlightTarget;
 	const highlightRect = useOnboardingHighlightRect({

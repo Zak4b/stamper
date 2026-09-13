@@ -1,7 +1,6 @@
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import Sidebar from "./components/navigation/Sidebar";
-import { PDFProvider } from "./contexts/PDFContext";
-import { usePDFContext } from "./hooks/usePDFContext";
+import { usePDFStore } from "./stores/usePDFStore";
 import OnboardingWizardPanel, { type OnboardingWizardPanelHandle } from "./components/onboarding/OnboardingWizardPanel";
 import { useUpdaterStore } from "./stores/useUpdaterStore";
 import { lazy, Suspense, useEffect, useRef } from "react";
@@ -12,8 +11,13 @@ const PositionStep = lazy(() => import("./pages/PositionStep"));
 const StampingStep = lazy(() => import("./pages/StampingStep"));
 const ReviewStep = lazy(() => import("./pages/ReviewStep"));
 
-function AppContent() {
-	const { currentStep, samplePDF, options, setCurrentStep } = usePDFContext();
+export default function App() {
+	const currentStep = usePDFStore((s) => s.currentStep);
+	const samplePDF = usePDFStore((s) => s.samplePDF);
+	const stampPosition = usePDFStore((s) => s.options.stampPosition);
+	const ocrRegion = usePDFStore((s) => s.options.ocrRegion);
+	const ocrPageNumber = usePDFStore((s) => s.options.ocrPageNumber);
+	const setCurrentStep = usePDFStore((s) => s.setCurrentStep);
 	const onboardingRef = useRef<OnboardingWizardPanelHandle>(null);
 	const initializeUpdater = useUpdaterStore((s) => s.initialize);
 
@@ -24,7 +28,7 @@ function AppContent() {
 			<Sidebar
 				currentStep={currentStep}
 				samplePDF={samplePDF}
-				stampPosition={!!options.stampPosition}
+				stampPosition={!!stampPosition}
 				onStepChange={setCurrentStep}
 				onStartOnboarding={() => onboardingRef.current?.start()}
 			/>
@@ -40,18 +44,10 @@ function AppContent() {
 
 						{currentStep === "stamping" && <StampingStep />}
 
-						{currentStep === "review" && <ReviewStep stampPosition={options.stampPosition!} ocrRegion={options.ocrRegion} ocrPageNumber={options.ocrPageNumber} />}
+						{currentStep === "review" && <ReviewStep stampPosition={stampPosition!} ocrRegion={ocrRegion} ocrPageNumber={ocrPageNumber} />}
 					</div>
 				</Suspense>
 			</main>
 		</div>
-	);
-}
-
-export default function App() {
-	return (
-		<PDFProvider>
-			<AppContent />
-		</PDFProvider>
 	);
 }
