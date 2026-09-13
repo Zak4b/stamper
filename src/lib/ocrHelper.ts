@@ -1,4 +1,4 @@
-import { Rectangle } from "tesseract.js";
+import { PSM, Rectangle } from "tesseract.js";
 import { createCanvasFromRegion } from "./pdfRenderer";
 import { ocrWorkerManager } from "./ocrWorkerManager";
 import { getEnabledPatterns } from "../config/appConfig";
@@ -37,7 +37,12 @@ export async function performOCRWithProgress(pdfFile: File, pageNumber: number, 
 	onProgress(0);
 	const imageData = await createCanvasFromRegion(pdfFile, pageNumber, region, PDF_RENDER_SCALE);
 
-	const result = await ocrWorkerManager.addTask(imageData, onProgress);
+	// Une région est un bloc de texte isolé : l'analyse de mise en page du mode AUTO
+	// y cherche une structure qui n'existe pas. Sur une page entière elle reste
+	// nécessaire, sinon des colonnes voisines sont fusionnées en une même ligne.
+	const result = await ocrWorkerManager.addTask(imageData, onProgress, {
+		tessedit_pageseg_mode: region ? PSM.SINGLE_BLOCK : PSM.AUTO,
+	});
 
 	const ids = extractIds(result.text);
 	console.debug("OCR Result:", {

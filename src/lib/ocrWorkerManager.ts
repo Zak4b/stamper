@@ -1,7 +1,9 @@
 import Tesseract, { createWorker, Worker, ImageLike } from "tesseract.js";
+import { PDF_RENDER_SCALE } from "../config/pdfRender";
 
 export interface OCRTask {
 	imageData: ImageLike;
+	params?: Partial<Tesseract.WorkerParams>;
 	onProgress?: (progress: number) => void;
 	resolve: (result: Tesseract.Page) => void;
 	reject: (error: Error) => void;
@@ -22,6 +24,7 @@ export class OCRWorkerManager {
 	private destroyTimeout: NodeJS.Timeout | null = null;
 	private readonly DESTROY_DELAY = 5000; // 5 secondes
 	private currentTask: OCRTask | null = null; // Référence à la tâche en cours
+	private appliedParams: string | null = null;
 
 	// Singleton instance
 	private static instance: OCRWorkerManager | null = null;
@@ -34,7 +37,7 @@ export class OCRWorkerManager {
 	}
 
 	// Ajouter une tâche OCR à la file
-	public addTask(imageData: ImageLike, onProgress?: (progress: number) => void): Promise<Tesseract.Page> {
+	public addTask(imageData: ImageLike, onProgress?: (progress: number) => void, params?: Partial<Tesseract.WorkerParams>): Promise<Tesseract.Page> {
 		// Annuler le timeout de destruction si une nouvelle tâche arrive
 		if (this.destroyTimeout) {
 			clearTimeout(this.destroyTimeout);
@@ -43,6 +46,7 @@ export class OCRWorkerManager {
 		return new Promise((resolve, reject) => {
 			const task: OCRTask = {
 				imageData,
+				params,
 				onProgress,
 				resolve,
 				reject,
@@ -107,12 +111,12 @@ export class OCRWorkerManager {
 				// Dans Electron, utiliser des chemins relatifs
 				workerPath: "./tesseract/worker.min.js",
 				langPath: "./tesseract",
-				corePath: "./tesseract/tesseract-core.wasm.js",
+				corePath: "./tesseract/tesseract-core-relaxedsimd-lstm.wasm.js",
 			} : {
 				// Dans le navigateur, utiliser des chemins absolus
 				workerPath: "/tesseract/worker.min.js",
 				langPath: "/tesseract",
-				corePath: "/tesseract/tesseract-core.wasm.js",
+				corePath: "/tesseract/tesseract-core-relaxedsimd-lstm.wasm.js",
 			};
 			
 			this.worker = await createWorker("fra", 1, {
@@ -124,7 +128,14 @@ export class OCRWorkerManager {
 				},
 				...config,
 			});
-			
+
+			await this.worker.setParameters({
+				// Un PDF est en 72 DPI, rendu ici à PDF_RENDER_SCALE. Le déclarer évite
+				// que Tesseract l'estime — et se trompe — en normalisant la hauteur des
+				// lignes pour le LSTM.
+				user_defined_dpi: String(Math.round(72 * PDF_RENDER_SCALE)),
+			});
+
 			console.debug("Worker Tesseract créé avec succès");
 		} catch (error) {
 			console.error("Erreur lors de la création du worker:", error);
@@ -138,6 +149,7 @@ export class OCRWorkerManager {
 			console.debug("Destructing OCR worker...");
 			await this.worker.terminate();
 			this.worker = null;
+			this.appliedParams = null;
 
 			if (this.destroyTimeout) {
 				clearTimeout(this.destroyTimeout);
@@ -158,6 +170,15 @@ export class OCRWorkerManager {
 			this.currentTask = task;
 
 			// Lancer la reconnaissance OCR
+			// Les paramètres persistent sur le worker : ne les repousser qu'au changement.
+			if (task.params) {
+				const key = JSON.stringify(task.params);
+				if (key !== this.appliedParams) {
+					await this.worker.setParameters(task.params);
+					this.appliedParams = key;
+				}
+			}
+
 			const { data } = await this.worker.recognize(task.imageData);
 			task.resolve(data);
 		} catch (error) {
