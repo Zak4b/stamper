@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, type ReactNode } from "react";
 import { StampPosition } from "../../lib/pdfStamper";
 import { usePDFRenderingContext } from "../../hooks/usePDFRenderingContext";
 import PDFRenderer from "./PDFRenderer";
@@ -9,23 +9,26 @@ interface Props {
 	pdfFile: File;
 	onPositionSelected: (position: StampPosition) => void;
 	currentPosition?: StampPosition;
+	actions?: ReactNode; // Actions additionnelles affichées dans la barre d'outils
 }
 
 // Composant pour afficher la position sélectionnée
 const PositionMarker: React.FC<{ position: StampPosition | null }> = ({ position }) => {
-	const { canvasRef, currentPage } = usePDFRenderingContext();
+	const { canvasMetrics, currentPage } = usePDFRenderingContext();
 
-	if (!position || position.page !== currentPage || !canvasRef.current) return null;
+	if (!position || position.page !== currentPage || !canvasMetrics.width || !canvasMetrics.height) return null;
 
-	const canvas = canvasRef.current;
-	const scale = PDF_RENDER_SCALE;
+	// Le canvas est réduit à l'écran pour tenir dans la hauteur disponible :
+	// le tampon de prévisualisation doit suivre ce ratio d'affichage.
+	const displayRatio = canvasMetrics.offsetWidth / canvasMetrics.width;
+	const scale = PDF_RENDER_SCALE * displayRatio;
 
 	return (
 		<div
 			className="absolute pointer-events-none whitespace-nowrap select-none bg-white/80 border border-blue-600 rounded px-1"
 			style={{
-				left: `${canvas.offsetLeft + (position.x / canvas.width) * canvas.offsetWidth}px`,
-				top: `${canvas.offsetTop + (position.y / canvas.height) * canvas.offsetHeight}px`,
+				left: `${canvasMetrics.offsetLeft + (position.x / canvasMetrics.width) * canvasMetrics.offsetWidth}px`,
+				top: `${canvasMetrics.offsetTop + (position.y / canvasMetrics.height) * canvasMetrics.offsetHeight}px`,
 				fontFamily: appConfig.stampStyle.fontFamily,
 				fontSize: `${appConfig.stampStyle.fontSize * scale}px`,
 				color: appConfig.stampStyle.fontColor,
@@ -42,7 +45,7 @@ const PositionMarker: React.FC<{ position: StampPosition | null }> = ({ position
 	);
 };
 
-const StampPositionSelector: React.FC<Props> = ({ pdfFile, onPositionSelected, currentPosition }) => {
+const StampPositionSelector: React.FC<Props> = ({ pdfFile, onPositionSelected, currentPosition, actions }) => {
 	const [position, setPosition] = useState<StampPosition | null>(currentPosition || null);
 	const [currentPage, setCurrentPage] = useState(0);
 	const [isDragging, setIsDragging] = useState(false);
@@ -85,10 +88,15 @@ const StampPositionSelector: React.FC<Props> = ({ pdfFile, onPositionSelected, c
 		onMouseLeave: handleMouseLeave,
 	};
 
-	const additionalControls = position && (
-		<div className="text-sm text-gray-600">
-			Position: X={Math.round(position.x)}, Y={Math.round(position.y)}, Page={position.page + 1}
-		</div>
+	const additionalControls = (
+		<>
+			{position && (
+				<span className="text-xs text-gray-500 tabular-nums whitespace-nowrap">
+					X {Math.round(position.x)} · Y {Math.round(position.y)} · p.{position.page + 1}
+				</span>
+			)}
+			{actions}
+		</>
 	);
 
 	return (
@@ -98,7 +106,7 @@ const StampPositionSelector: React.FC<Props> = ({ pdfFile, onPositionSelected, c
 			title="Sélectionner la position du tampon"
 			additionalControls={additionalControls}
 			mouseEventHandlers={mouseEventHandlers}
-			canvasClassName={isDragging ? "cursor-grabbing mx-auto" : "cursor-grab mx-auto"}
+			canvasClassName={isDragging ? "cursor-grabbing" : "cursor-grab"}
 		>
 			<PositionMarker position={position} />
 		</PDFRenderer>

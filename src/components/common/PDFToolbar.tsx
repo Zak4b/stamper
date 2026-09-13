@@ -59,24 +59,24 @@ const Toolbar: React.FC<ToolbarProps> = ({ label }) => {
 	};
 
 	return (
-		<div className="flex items-center justify-between mb-6">
+		<div className="shrink-0 flex items-center justify-between gap-3 mb-3">
 			<div>
-				<h2 className="text-xl font-semibold text-gray-900">{label}</h2>
+				<h2 className="text-base font-semibold text-gray-900">{label}</h2>
 			</div>
-			<div className="flex gap-3">
-				<label data-onboarding-target="load-pdfs" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+			<div className="flex gap-2">
+				<label data-onboarding-target="load-pdfs" className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
 					<FileText className="w-4 h-4" />
 					<span className="text-sm font-medium">Charger des PDFs</span>
 					<input ref={fileInputRef} type="file" multiple accept=".pdf" className="hidden" onChange={(e) => e.target.files && handleFilesSelected(e.target.files)} />
 				</label>
 				{loadedPDFs.length > 0 && (
 					<>
-						<button onClick={handleClearPDFs} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+						<button onClick={handleClearPDFs} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
 							<Trash2 className="w-4 h-4" />
 							Effacer tout
 						</button>
 						{loadedPDFs.length > 0 && (
-							<button onClick={handleDownloadAll} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
+							<button onClick={handleDownloadAll} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
 								<Download className="w-4 h-4" />
 								Télécharger tout (ZIP)
 							</button>

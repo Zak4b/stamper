@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { Rectangle } from "tesseract.js";
 import { Search } from "lucide-react";
 import { usePDFRenderingContext } from "../../hooks/usePDFRenderingContext";
@@ -10,24 +10,23 @@ interface Props {
 	onPageChanged?: (pageNumber: number) => void;
 	currentRegion?: Rectangle; // Région actuelle depuis le context
 	initialPage?: number; // Page initiale depuis le context
+	actions?: ReactNode; // Actions additionnelles affichées dans la barre d'outils
 }
 
 // Composant pour afficher la région sélectionnée
 const RegionOverlay: React.FC<{ region: Rectangle | null }> = ({ region }) => {
-	const { canvasRef } = usePDFRenderingContext();
+	const { canvasMetrics } = usePDFRenderingContext();
 
-	if (!region || !canvasRef.current) return null;
-
-	const canvas = canvasRef.current;
+	if (!region || !canvasMetrics.width || !canvasMetrics.height) return null;
 
 	return (
 		<div
 			className="absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none"
 			style={{
-				left: `${canvas.offsetLeft + (region.left / canvas.width) * canvas.offsetWidth}px`,
-				top: `${canvas.offsetTop + (region.top / canvas.height) * canvas.offsetHeight}px`,
-				width: `${(region.width / canvas.width) * canvas.offsetWidth}px`,
-				height: `${(region.height / canvas.height) * canvas.offsetHeight}px`,
+				left: `${canvasMetrics.offsetLeft + (region.left / canvasMetrics.width) * canvasMetrics.offsetWidth}px`,
+				top: `${canvasMetrics.offsetTop + (region.top / canvasMetrics.height) * canvasMetrics.offsetHeight}px`,
+				width: `${(region.width / canvasMetrics.width) * canvasMetrics.offsetWidth}px`,
+				height: `${(region.height / canvasMetrics.height) * canvasMetrics.offsetHeight}px`,
 			}}
 		/>
 	);
@@ -88,7 +87,7 @@ function useRegionSelection(
 	};
 }
 
-const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage }) => {
+const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageChanged, currentRegion, initialPage, actions }) => {
 	const [currentPage, setCurrentPage] = useState(initialPage || 0);
 	const isInitialMount = useRef(true);
 	const { isSelecting, region, setRegion, mouseEventHandlers } = useRegionSelection(currentRegion, (r) => {
@@ -140,9 +139,10 @@ const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageC
 
 	const additionalControls = (
 		<>
-			<button onClick={handleUseFullPage} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium">
-				Utiliser la page complète
+			<button onClick={handleUseFullPage} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs font-medium whitespace-nowrap">
+				Page complète
 			</button>
+			{actions}
 		</>
 	);
 
@@ -154,10 +154,10 @@ const OCRRegionSelector: React.FC<Props> = ({ pdfFile, onRegionSelected, onPageC
 			additionalControls={additionalControls}
 			mouseEventHandlers={mouseEventHandlers}
 			title={
-				<div className="flex items-center gap-2">
-					<Search className="w-5 h-5 text-blue-600" />
-					<span>Zone de recherche du numéro de dossier</span>
-				</div>
+				<span className="flex items-center gap-2">
+					<Search className="w-4 h-4 text-blue-600 shrink-0" />
+					<span className="truncate">Zone de recherche du numéro de dossier</span>
+				</span>
 			}
 			description="Sélectionnez la zone où se trouve le numéro de dossier en cliquant et glissant sur le PDF, ou utilisez la page complète pour une recherche automatique."
 		>

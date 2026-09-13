@@ -7,9 +7,9 @@ const DatabaseStep: React.FC = () => {
 	const { setSamplePDF } = usePDFContext();
 
 	return (
-		<div data-onboarding-target="database">
-			<div className="flex-shrink-0">
-						<label data-onboarding-target="pdf-model" className="cursor-pointer inline-flex items-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+		<div className="flex-1 min-h-0 flex flex-col gap-3" data-onboarding-target="database">
+			<div className="shrink-0">
+						<label data-onboarding-target="pdf-model" className="cursor-pointer inline-flex items-center gap-3 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
 					<FileText className="w-6 h-6" />
 					<div className="text-left">
 						<div className="font-semibold">Charger un modèle PDF</div>

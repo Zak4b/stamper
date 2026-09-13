@@ -151,48 +151,48 @@ const DatabaseManager: React.FC = () => {
 
 	return (
 		<>
-			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-				<div className="flex items-center justify-between mb-6">
+			<div className="flex-1 min-h-0 flex flex-col bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+				<div className="shrink-0 flex items-center justify-between mb-3">
 					<div>
-						<h3 className="text-xl font-semibold text-gray-900">Gestion des dossiers</h3>
-						<p className="text-sm text-gray-500 mt-1">
+						<h3 className="text-base font-semibold text-gray-900">Gestion des dossiers</h3>
+						<p className="text-xs text-gray-500">
 							{dossiers.length} dossier{dossiers.length !== 1 ? "s" : ""} enregistré{dossiers.length !== 1 ? "s" : ""}
 						</p>
 					</div>
 					<div className="flex gap-2">
-						<button onClick={handleClearDatabase} className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+						<button onClick={handleClearDatabase} className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
 							<span className="text-sm font-medium">Vider la base</span>
 						</button>
-						<label data-onboarding-target="csv-import" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+						<label data-onboarding-target="csv-import" className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
 							<Upload className="w-4 h-4" />
 							<span className="text-sm font-medium">Importer CSV</span>
 							<input type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && importCSV(e.target.files[0])} />
 						</label>
-						<button onClick={downloadCSV} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+						<button onClick={downloadCSV} className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
 							<Download className="w-4 h-4" />
 							<span className="text-sm font-medium">Exporter CSV</span>
 						</button>
 					</div>
 				</div>
 
-				<div className="mb-6 p-4 bg-gray-50 rounded-lg">
-					<h3 className="text-sm font-medium text-gray-700 mb-3">Ajouter un dossier</h3>
+				<div className="shrink-0 mb-3 p-3 bg-gray-50 rounded-lg">
+					<h3 className="text-xs font-medium text-gray-700 mb-2">Ajouter un dossier</h3>
 					<div className="flex gap-3">
 						<input
 							type="text"
 							placeholder="Numéro de dossier"
 							value={newDossier.numero}
 							onChange={(e) => setNewDossier({ ...newDossier, numero: e.target.value })}
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 						/>
 						<input
 							type="text"
 							placeholder="Valeur du tampon"
 							value={newDossier.valeur}
 							onChange={(e) => setNewDossier({ ...newDossier, valeur: e.target.value })}
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 						/>
-						<button onClick={addDossier} className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+						<button onClick={addDossier} className="inline-flex items-center gap-2 px-5 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
 							<Plus className="w-4 h-4" />
 							Ajouter
 						</button>
@@ -200,27 +200,26 @@ const DatabaseManager: React.FC = () => {
 				</div>
 
 				{loading ? (
-					<div className="text-center py-8 text-gray-500">Chargement...</div>
+					<div className="flex-1 min-h-0 flex items-center justify-center text-gray-500">Chargement...</div>
 				) : dossiers.length === 0 ? (
-					<div className="text-center py-8 text-gray-500">Aucun dossier. Ajoutez-en un ou importez un fichier CSV.</div>
+					<div className="flex-1 min-h-0 flex items-center justify-center text-gray-500">Aucun dossier. Ajoutez-en un ou importez un fichier CSV.</div>
 				) : (
-					<div className="overflow-x-auto">
-						<div className="overflow-x-auto max-h-[calc(1.75rem*20+2rem)]">
-							{/* ~20 rows limit */}
+					<div className="flex-1 min-h-0 overflow-auto">
+						<div>
 							<table className="w-full">
-								<thead>
+								<thead className="sticky top-0 bg-white">
 									<tr className="border-b border-gray-200">
-										<th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Numéro de dossier</th>
-										<th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Valeur du tampon</th>
-										<th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
+										<th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Numéro de dossier</th>
+										<th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Valeur du tampon</th>
+										<th className="text-right py-2 px-3 text-xs font-medium text-gray-700">Actions</th>
 									</tr>
 								</thead>
 								<tbody>
 									{dossiers.map((dossier) => (
 										<tr key={dossier.id} className="border-b border-gray-100 hover:bg-gray-50">
-											<td className="py-3 px-4 text-sm text-gray-900">{dossier.numero_dossier}</td>
-											<td className="py-3 px-4 text-sm text-gray-900">{dossier.valeur_tampon}</td>
-											<td className="py-3 px-4 text-right">
+											<td className="py-2 px-3 text-sm text-gray-900">{dossier.numero_dossier}</td>
+											<td className="py-2 px-3 text-sm text-gray-900">{dossier.valeur_tampon}</td>
+											<td className="py-2 px-3 text-right">
 											<button onClick={() => deleteDossier(dossier.numero_dossier)} className="text-red-600 hover:text-red-700 transition-colors">
 													<Trash2 className="w-4 h-4" />
 												</button>
